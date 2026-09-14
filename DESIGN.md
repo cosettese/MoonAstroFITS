@@ -30,3 +30,11 @@ ordering is part of the FITS standard. Data length uses the general
 integer arithmetic. Primary arrays and `IMAGE` extensions expose an
 `ImageLayout`; other extension types remain traversable without pretending
 their cells are image pixels.
+
+## Integer pixels
+
+`decode_integer_image` reads FITS big-endian integer samples without losing
+their stored representation. `BITPIX=8` remains unsigned, while 16/32/64-bit
+samples are decoded as signed two's-complement values. `IntegerImage` keeps the
+raw values alongside `BSCALE`, `BZERO`, and `BLANK`; callers can request
+physical values while blank samples remain distinguishable as `None`.

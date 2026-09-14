@@ -54,6 +54,27 @@ pub(all) struct FitsFile {
 } derive(Eq, Debug)
 
 ///|
+/// Decoded integer image samples and their FITS linear-scaling metadata.
+pub(all) struct IntegerImage {
+  axes : Array[Int]
+  raw : Array[Int64]
+  bscale : Double
+  bzero : Double
+  blank : Int64?
+} derive(Eq, Debug)
+
+///|
+/// Convert every non-blank raw sample to its physical FITS value.
+pub fn IntegerImage::physical_values(self : IntegerImage) -> Array[Double?] {
+  self.raw.map(fn(value) {
+    match self.blank {
+      Some(blank) if value == blank => None
+      _ => Some(value.to_double() * self.bscale + self.bzero)
+    }
+  })
+}
+
+///|
 /// Source-aware failures from FITS structural parsing.
 pub(all) enum FitsError {
   Truncated(Int, Int, Int)
@@ -71,6 +92,10 @@ pub(all) enum FitsError {
   InvalidAxis(Int, Int)
   InvalidParameter(String, Int)
   SizeOverflow(String)
+  NotImageHdu(Int)
+  UnsupportedIntegerBitpix(Int)
+  UnsupportedImageLayout(Int)
+  InvalidReal(String, String)
 } derive(Eq, Debug)
 
 ///|
@@ -103,5 +128,12 @@ pub fn FitsError::message(self : FitsError) -> String {
     InvalidParameter(keyword, value) =>
       "FITS keyword '\{keyword}' has invalid value \{value}"
     SizeOverflow(context) => "FITS \{context} exceeds addressable input size"
+    NotImageHdu(index) => "FITS HDU \{index} is not an image"
+    UnsupportedIntegerBitpix(value) =>
+      "FITS BITPIX \{value} is not an integer pixel representation"
+    UnsupportedImageLayout(index) =>
+      "FITS HDU \{index} uses random groups or parameters and cannot be decoded as a contiguous image"
+    InvalidReal(keyword, value) =>
+      "FITS keyword '\{keyword}' does not contain a finite real value: '\{value}'"
   }
 }

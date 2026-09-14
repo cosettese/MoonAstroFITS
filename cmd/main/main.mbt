@@ -13,20 +13,37 @@ fn main {
   let bytes = []
   append_card(bytes, "SIMPLE  =                    T")
   append_card(bytes, "BITPIX  =                   16")
-  append_card(bytes, "NAXIS   =                    0")
+  append_card(bytes, "NAXIS   =                    1")
+  append_card(bytes, "NAXIS1  =                    3")
+  append_card(bytes, "BSCALE  =                    2")
+  append_card(bytes, "BZERO   =                   10")
   append_card(bytes, "END")
   while bytes.length() % 2880 != 0 {
     bytes.push(b' ')
   }
-  match @fits.parse_fits(Bytes::from_array(bytes)) {
+  bytes.push(b'\xFF')
+  bytes.push(b'\xFE')
+  bytes.push(b'\x00')
+  bytes.push(b'\x00')
+  bytes.push(b'\x00')
+  bytes.push(b'\x03')
+  while bytes.length() % 2880 != 0 {
+    bytes.push(b'\x00')
+  }
+  let data = Bytes::from_array(bytes)
+  match @fits.parse_fits(data) {
     Err(error) => println("invalid FITS: \{error.message()}")
     Ok(file) =>
       match file.primary() {
         None => println("invalid FITS: no primary HDU")
         Some(primary) =>
-          println(
-            "FITS file: \{file.hdus.length()} HDU, primary data at byte \{primary.data_offset}",
-          )
+          match @fits.decode_integer_image(data, primary) {
+            Err(error) => println("invalid image: \{error.message()}")
+            Ok(image) =>
+              println(
+                "FITS file: \{file.hdus.length()} HDU, decoded \{image.raw.length()} scaled integer pixels",
+              )
+          }
       }
   }
 }

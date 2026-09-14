@@ -20,6 +20,8 @@ so the same parser can run on MoonBit's portable targets.
 - required `SIMPLE`/`XTENSION`, `BITPIX`, `NAXIS`, and `NAXISn` ordering;
 - checked image geometry and 2880-byte data-unit padding;
 - overflow and truncated-payload rejection before data access.
+- big-endian 8/16/32/64-bit integer image decoding;
+- explicit `BSCALE`, `BZERO`, and `BLANK` physical-value semantics.
 
 Run the checks and the in-memory example:
 
@@ -29,8 +31,8 @@ moon test --deny-warn
 moon run cmd/main
 ```
 
-The next milestones will decode typed big-endian pixel arrays and add
-deterministic writing and scientific table support.
+The next milestones will add IEEE floating-point pixels, deterministic writing,
+and scientific table support.
 
 ## Scope and origin
 
