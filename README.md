@@ -30,6 +30,8 @@ so the same parser can run on MoonBit's portable targets.
 - byte-exact integer `encode → decode` round trips.
 - IEEE binary32/binary64 pixel encoding with big-endian output;
 - binary32 finite-overflow rejection and floating `encode → decode` tests.
+- complete primary-HDU assembly with exact payload-length validation;
+- standards-aligned space header padding and zero data padding.
 
 Run the checks and the in-memory example:
 
@@ -39,7 +41,7 @@ moon test --deny-warn
 moon run cmd/main
 ```
 
-The next milestones will add complete image-HDU assembly and scientific table
+The next milestones will add extension-HDU assembly and scientific table
 support.
 
 ## Scope and origin

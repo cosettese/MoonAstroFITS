@@ -117,6 +117,7 @@ pub(all) enum FitsError {
   PixelOutOfRange(Int, Int64, Int)
   BlankOutOfRange(Int64, Int)
   FloatingPixelOverflow(Int, Int)
+  InvalidDataLength(Int, Int)
 } derive(Eq, Debug)
 
 ///|
@@ -168,5 +169,7 @@ pub fn FitsError::message(self : FitsError) -> String {
       "BLANK value \{value} is outside the BITPIX=\{bitpix} range"
     FloatingPixelOverflow(index, bitpix) =>
       "pixel \{index} is finite but overflows BITPIX=\{bitpix}"
+    InvalidDataLength(expected, actual) =>
+      "FITS header requires \{expected} data bytes, got \{actual}"
   }
 }

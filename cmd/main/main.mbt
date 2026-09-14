@@ -21,16 +21,16 @@ fn main {
   while bytes.length() % 2880 != 0 {
     bytes.push(b' ')
   }
-  bytes.push(b'\xFF')
-  bytes.push(b'\xFE')
-  bytes.push(b'\x00')
-  bytes.push(b'\x00')
-  bytes.push(b'\x00')
-  bytes.push(b'\x03')
-  while bytes.length() % 2880 != 0 {
-    bytes.push(b'\x00')
+  let header = @fits.parse_header(Bytes::from_array(bytes)).unwrap()
+  let image : @fits.IntegerImage = {
+    axes: [3],
+    raw: [-2L, 0L, 3L],
+    bscale: 2.0,
+    bzero: 10.0,
+    blank: None,
   }
-  let data = Bytes::from_array(bytes)
+  let pixels = @fits.encode_integer_pixels(image, 16).unwrap()
+  let data = @fits.encode_primary_hdu(header, pixels).unwrap()
   match @fits.parse_fits(data) {
     Err(error) => println("invalid FITS: \{error.message()}")
     Ok(file) =>

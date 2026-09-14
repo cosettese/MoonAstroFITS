@@ -128,3 +128,54 @@ pub fn encode_header(header : Header) -> Result[Bytes, FitsError] {
   }
   Ok(Bytes::from_array(output))
 }
+
+///|
+fn append_bytes(output : Array[Byte], bytes : Bytes) -> Unit {
+  for byte in bytes {
+    output.push(byte)
+  }
+}
+
+///|
+/// Assemble one complete primary HDU from a header and encoded data unit.
+///
+/// Structural cards and the exact unpadded data length are validated with the
+/// same rules used by `parse_fits`. Header padding is ASCII space; data padding
+/// is zero. The supplied header's stored `data_offset` is ignored because the
+/// canonical encoded header determines the output offset.
+pub fn encode_primary_hdu(
+  header : Header,
+  data : Bytes,
+) -> Result[Bytes, FitsError] {
+  let layout = match analyze_hdu_header(header, 0) {
+    Err(error) => return Err(error)
+    Ok(value) => value
+  }
+  if layout.data_length != data.length() {
+    return Err(InvalidDataLength(layout.data_length, data.length()))
+  }
+  let header_bytes = match encode_header(header) {
+    Err(error) => return Err(error)
+    Ok(value) => value
+  }
+  let padded_data_length = match checked_padded_block_length(data.length()) {
+    Err(error) => return Err(error)
+    Ok(value) => value
+  }
+  let output_length = match
+    checked_sum(
+      header_bytes.length(),
+      padded_data_length,
+      "encoded primary HDU",
+    ) {
+    Err(error) => return Err(error)
+    Ok(value) => value
+  }
+  let output = Array(capacity=output_length)
+  append_bytes(output, header_bytes)
+  append_bytes(output, data)
+  while output.length() < output_length {
+    output.push(b'\x00')
+  }
+  Ok(Bytes::from_array(output))
+}

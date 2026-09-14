@@ -16,6 +16,8 @@ pub fn encode_header(Header) -> Result[Bytes, FitsError]
 
 pub fn encode_integer_pixels(IntegerImage, Int) -> Result[Bytes, FitsError]
 
+pub fn encode_primary_hdu(Header, Bytes) -> Result[Bytes, FitsError]
+
 pub fn parse_fits(Bytes) -> Result[FitsFile, FitsError]
 
 pub fn parse_header(Bytes) -> Result[Header, FitsError]
@@ -58,6 +60,7 @@ pub(all) enum FitsError {
   PixelOutOfRange(Int, Int64, Int)
   BlankOutOfRange(Int64, Int)
   FloatingPixelOverflow(Int, Int)
+  InvalidDataLength(Int, Int)
 } derive(Eq, @debug.Debug)
 pub fn FitsError::message(Self) -> String
 

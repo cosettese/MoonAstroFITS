@@ -95,3 +95,89 @@ test "reject non-ASCII encoded text" {
     is Err(@moonastrofits.InvalidCard(_, _)),
   )
 }
+
+///|
+test "assemble and round trip an integer primary HDU" {
+  let header = @moonastrofits.parse_header(
+    test_header([
+      "SIMPLE  =                    T", "BITPIX  =                   16", "NAXIS   =                    1",
+      "NAXIS1  =                    3", "BLANK   =                    0", "END",
+    ]),
+  ).unwrap()
+  let image : @moonastrofits.IntegerImage = {
+    axes: [3],
+    raw: [-2L, 0L, 3L],
+    bscale: 1.0,
+    bzero: 0.0,
+    blank: Some(0L),
+  }
+  let pixels = @moonastrofits.encode_integer_pixels(image, 16).unwrap()
+  let encoded = @moonastrofits.encode_primary_hdu(header, pixels).unwrap()
+  assert_eq(encoded.length(), 5760)
+  assert_eq(encoded[2880:2886], b"\xFF\xFE\x00\x00\x00\x03")
+  assert_eq(encoded[5759], b'\x00')
+  let file = @moonastrofits.parse_fits(encoded).unwrap()
+  let primary = file.primary().unwrap()
+  assert_eq(
+    @moonastrofits.decode_integer_image(encoded, primary).unwrap(),
+    image,
+  )
+}
+
+///|
+test "assemble and round trip a floating primary HDU" {
+  let header = @moonastrofits.parse_header(
+    test_header([
+      "SIMPLE  =                    T", "BITPIX  =                  -32", "NAXIS   =                    1",
+      "NAXIS1  =                    2", "END",
+    ]),
+  ).unwrap()
+  let image : @moonastrofits.FloatingImage = {
+    axes: [2],
+    raw: [1.5, -2.25],
+    bscale: 1.0,
+    bzero: 0.0,
+  }
+  let pixels = @moonastrofits.encode_floating_pixels(image, -32).unwrap()
+  let encoded = @moonastrofits.encode_primary_hdu(header, pixels).unwrap()
+  let primary = @moonastrofits.parse_fits(encoded).unwrap().primary().unwrap()
+  assert_eq(
+    @moonastrofits.decode_floating_image(encoded, primary).unwrap(),
+    image,
+  )
+}
+
+///|
+test "primary HDU assembly validates exact payload length" {
+  let header = @moonastrofits.parse_header(
+    test_header([
+      "SIMPLE  =                    T", "BITPIX  =                    8", "NAXIS   =                    1",
+      "NAXIS1  =                    2", "END",
+    ]),
+  ).unwrap()
+  assert_true(
+    @moonastrofits.encode_primary_hdu(header, b"\x01")
+    is Err(@moonastrofits.InvalidDataLength(2, 1)),
+  )
+  assert_true(
+    @moonastrofits.encode_primary_hdu(header, b"\x01\x02\x03")
+    is Err(@moonastrofits.InvalidDataLength(2, 3)),
+  )
+}
+
+///|
+test "primary HDU assembly pads data spanning multiple blocks" {
+  let header = @moonastrofits.parse_header(
+    test_header([
+      "SIMPLE  =                    T", "BITPIX  =                    8", "NAXIS   =                    1",
+      "NAXIS1  =                 2881", "END",
+    ]),
+  ).unwrap()
+  let pixels = Bytes::make(2881, b'\x7F')
+  let encoded = @moonastrofits.encode_primary_hdu(header, pixels).unwrap()
+  assert_eq(encoded.length(), 8640)
+  assert_eq(encoded[5760], b'\x7F')
+  assert_eq(encoded[5761], b'\x00')
+  assert_eq(encoded[8639], b'\x00')
+  assert_eq(@moonastrofits.parse_fits(encoded).unwrap().hdus.length(), 1)
+}

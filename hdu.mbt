@@ -151,11 +151,17 @@ fn bitpix_bytes(bitpix : Int) -> Result[Int, FitsError] {
 }
 
 ///|
-fn parse_hdu_layout(
-  data : Bytes,
+priv struct HduLayout {
+  kind : HduKind
+  image : ImageLayout?
+  data_length : Int
+}
+
+///|
+fn analyze_hdu_header(
   header : Header,
   hdu_index : Int,
-) -> Result[Hdu, FitsError] {
+) -> Result[HduLayout, FitsError] {
   let kind = if hdu_index == 0 {
     let simple = match required_card(header, 0, "SIMPLE") {
       Err(error) => return Err(error)
@@ -280,31 +286,43 @@ fn parse_hdu_layout(
     Err(error) => return Err(error)
     Ok(value) => value
   }
-  let padded_data_length = match checked_padded_block_length(data_length) {
-    Err(error) => return Err(error)
-    Ok(value) => value
-  }
-  if padded_data_length > data.length() - header.data_offset {
-    return Err(
-      Truncated(
-        header.data_offset,
-        padded_data_length,
-        data.length() - header.data_offset,
-      ),
-    )
-  }
   let image = match kind {
     Primary | ImageExtension =>
       Some({ bitpix, axes, pixel_count, byte_length: data_length, })
     OtherExtension(_) => None
   }
+  Ok({ kind, image, data_length, })
+}
+
+///|
+fn parse_hdu_layout(
+  data : Bytes,
+  header : Header,
+  hdu_index : Int,
+) -> Result[Hdu, FitsError] {
+  let layout = match analyze_hdu_header(header, hdu_index) {
+    Err(error) => return Err(error)
+    Ok(value) => value
+  }
+  let padded_data_length = match
+    checked_padded_block_length(layout.data_length) {
+    Err(error) => return Err(error)
+    Ok(value) => value
+  }
+  if header.data_offset < 0 || header.data_offset > data.length() {
+    return Err(Truncated(header.data_offset, padded_data_length, 0))
+  }
+  let available = data.length() - header.data_offset
+  if padded_data_length > available {
+    return Err(Truncated(header.data_offset, padded_data_length, available))
+  }
   Ok({
     index: hdu_index,
-    kind,
+    kind: layout.kind,
     header,
-    image,
+    image: layout.image,
     data_offset: header.data_offset,
-    data_length,
+    data_length: layout.data_length,
     next_hdu_offset: header.data_offset + padded_data_length,
   })
 }

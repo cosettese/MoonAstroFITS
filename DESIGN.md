@@ -70,3 +70,11 @@ binary32 path uses nearest representable conversion but rejects finite values
 that would silently become infinity. The binary64 path is bit preserving,
 including NaN payloads and signed zero; both paths validate shape before
 allocating output.
+
+## Primary HDU assembly
+
+`encode_primary_hdu` combines a canonical header with an already encoded data
+unit. Header analysis is shared with the reader, so structural keyword order,
+geometry, random-group parameters, and overflow rules cannot drift between
+read and write paths. The API requires the exact unpadded payload length, then
+adds zero bytes to the next 2880-byte boundary.
