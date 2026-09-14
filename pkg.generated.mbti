@@ -6,6 +6,8 @@ import {
 }
 
 // Values
+pub fn parse_fits(Bytes) -> Result[FitsFile, FitsError]
+
 pub fn parse_header(Bytes) -> Result[Header, FitsError]
 
 pub fn parse_header_at(Bytes, Int) -> Result[Header, FitsError]
@@ -29,8 +31,36 @@ pub(all) enum FitsError {
   InvalidPadding(Int, Byte)
   MissingKeyword(String)
   InvalidInteger(String, String)
+  InvalidLogical(String, String)
+  InvalidString(String, String)
+  InvalidRequiredOrder(Int, String, String)
+  UnsupportedBitpix(Int)
+  InvalidAxis(Int, Int)
+  InvalidParameter(String, Int)
+  SizeOverflow(String)
 } derive(Eq, @debug.Debug)
 pub fn FitsError::message(Self) -> String
+
+pub(all) struct FitsFile {
+  hdus : Array[Hdu]
+} derive(Eq, @debug.Debug)
+pub fn FitsFile::primary(Self) -> Hdu?
+
+pub(all) struct Hdu {
+  index : Int
+  kind : HduKind
+  header : Header
+  image : ImageLayout?
+  data_offset : Int
+  data_length : Int
+  next_hdu_offset : Int
+} derive(Eq, @debug.Debug)
+
+pub(all) enum HduKind {
+  Primary
+  ImageExtension
+  OtherExtension(String)
+} derive(Eq, @debug.Debug)
 
 pub(all) struct Header {
   cards : Array[Card]
@@ -38,6 +68,13 @@ pub(all) struct Header {
 } derive(Eq, @debug.Debug)
 pub fn Header::get(Self, String) -> Card?
 pub fn Header::get_all(Self, String) -> Array[Card]
+
+pub(all) struct ImageLayout {
+  bitpix : Int
+  axes : Array[Int]
+  pixel_count : Int
+  byte_length : Int
+} derive(Eq, @debug.Debug)
 
 // Type aliases
 

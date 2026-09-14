@@ -16,6 +16,10 @@ so the same parser can run on MoonBit's portable targets.
 - `END` detection and 2880-byte header padding validation;
 - source-aware structural errors;
 - parsing from byte zero or an explicit absolute offset.
+- primary and extension HDU traversal with absolute byte boundaries;
+- required `SIMPLE`/`XTENSION`, `BITPIX`, `NAXIS`, and `NAXISn` ordering;
+- checked image geometry and 2880-byte data-unit padding;
+- overflow and truncated-payload rejection before data access.
 
 Run the checks and the in-memory example:
 
@@ -25,8 +29,8 @@ moon test --deny-warn
 moon run cmd/main
 ```
 
-The next milestones will validate HDU image geometry, decode typed big-endian
-pixel arrays, and add deterministic writing and scientific table support.
+The next milestones will decode typed big-endian pixel arrays and add
+deterministic writing and scientific table support.
 
 ## Scope and origin
 

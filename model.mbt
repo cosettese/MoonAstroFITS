@@ -19,6 +19,41 @@ pub(all) struct Header {
 } derive(Eq, Debug)
 
 ///|
+/// The structural role of one FITS header/data unit.
+pub(all) enum HduKind {
+  Primary
+  ImageExtension
+  OtherExtension(String)
+} derive(Eq, Debug)
+
+///|
+/// Checked geometry for a primary array or IMAGE extension.
+pub(all) struct ImageLayout {
+  bitpix : Int
+  axes : Array[Int]
+  pixel_count : Int
+  byte_length : Int
+} derive(Eq, Debug)
+
+///|
+/// One parsed FITS header/data unit with absolute byte boundaries.
+pub(all) struct Hdu {
+  index : Int
+  kind : HduKind
+  header : Header
+  image : ImageLayout?
+  data_offset : Int
+  data_length : Int
+  next_hdu_offset : Int
+} derive(Eq, Debug)
+
+///|
+/// A structurally validated sequence of FITS HDUs.
+pub(all) struct FitsFile {
+  hdus : Array[Hdu]
+} derive(Eq, Debug)
+
+///|
 /// Source-aware failures from FITS structural parsing.
 pub(all) enum FitsError {
   Truncated(Int, Int, Int)
@@ -29,6 +64,13 @@ pub(all) enum FitsError {
   InvalidPadding(Int, Byte)
   MissingKeyword(String)
   InvalidInteger(String, String)
+  InvalidLogical(String, String)
+  InvalidString(String, String)
+  InvalidRequiredOrder(Int, String, String)
+  UnsupportedBitpix(Int)
+  InvalidAxis(Int, Int)
+  InvalidParameter(String, Int)
+  SizeOverflow(String)
 } derive(Eq, Debug)
 
 ///|
@@ -49,5 +91,17 @@ pub fn FitsError::message(self : FitsError) -> String {
     MissingKeyword(keyword) => "required FITS keyword '\{keyword}' is missing"
     InvalidInteger(keyword, value) =>
       "FITS keyword '\{keyword}' does not contain an integer: '\{value}'"
+    InvalidLogical(keyword, value) =>
+      "FITS keyword '\{keyword}' does not contain a logical value: '\{value}'"
+    InvalidString(keyword, value) =>
+      "FITS keyword '\{keyword}' does not contain a valid quoted string: '\{value}'"
+    InvalidRequiredOrder(record, expected, found) =>
+      "FITS header record \{record + 1} must be '\{expected}', found '\{found}'"
+    UnsupportedBitpix(value) => "unsupported FITS BITPIX value \{value}"
+    InvalidAxis(axis, value) =>
+      "FITS NAXIS\{axis} must be non-negative, got \{value}"
+    InvalidParameter(keyword, value) =>
+      "FITS keyword '\{keyword}' has invalid value \{value}"
+    SizeOverflow(context) => "FITS \{context} exceeds addressable input size"
   }
 }

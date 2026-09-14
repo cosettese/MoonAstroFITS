@@ -18,11 +18,15 @@ fn main {
   while bytes.length() % 2880 != 0 {
     bytes.push(b' ')
   }
-  match @fits.parse_header(Bytes::from_array(bytes)) {
+  match @fits.parse_fits(Bytes::from_array(bytes)) {
     Err(error) => println("invalid FITS: \{error.message()}")
-    Ok(header) =>
-      println(
-        "FITS header: \{header.cards.length()} cards, data at byte \{header.data_offset}",
-      )
+    Ok(file) =>
+      match file.primary() {
+        None => println("invalid FITS: no primary HDU")
+        Some(primary) =>
+          println(
+            "FITS file: \{file.hdus.length()} HDU, primary data at byte \{primary.data_offset}",
+          )
+      }
   }
 }
