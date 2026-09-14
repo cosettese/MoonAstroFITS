@@ -163,6 +163,9 @@ pub(all) enum FitsError {
   UnsupportedTableFormat(String, String)
   InvalidTableRowWidth(Int, Int)
   TableRowOutOfRange(Int, Int)
+  InvalidTableRowCount(Int, Int)
+  InvalidTableCellCount(Int, Int)
+  InvalidTableCell(Int, String)
 } derive(Eq, Debug)
 
 ///|
@@ -223,5 +226,11 @@ pub fn FitsError::message(self : FitsError) -> String {
       "FITS binary-table row declares \{expected} bytes but its columns occupy \{actual}"
     TableRowOutOfRange(index, count) =>
       "FITS binary-table row \{index} is outside the \{count}-row table"
+    InvalidTableRowCount(expected, actual) =>
+      "FITS binary table requires \{expected} rows, got \{actual}"
+    InvalidTableCellCount(expected, actual) =>
+      "FITS binary-table row requires \{expected} cells, got \{actual}"
+    InvalidTableCell(column, reason) =>
+      "invalid FITS binary-table column \{column}: \{reason}"
   }
 }

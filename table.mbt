@@ -10,6 +10,62 @@ fn required_table_integer(
 }
 
 ///|
+fn table_kind_unit_width(kind : TableColumnKind) -> Int {
+  match kind {
+    Ascii | UnsignedByte => 1
+    Int16 => 2
+    Int32 | Float32 => 4
+    Int64 | Float64 => 8
+  }
+}
+
+///|
+fn validate_table_columns(table : BinaryTable) -> Result[Unit, FitsError] {
+  if table.row_length < 0 {
+    return Err(InvalidParameter("NAXIS1", table.row_length))
+  }
+  let mut offset = 0
+  for column in table.columns {
+    if column.repeat < 1 {
+      return Err(InvalidTableCell(column.index, "repeat must be positive"))
+    }
+    if column.offset != offset {
+      return Err(
+        InvalidTableCell(
+          column.index,
+          "expected byte offset \{offset}, got \{column.offset}",
+        ),
+      )
+    }
+    let width = match
+      checked_product(
+        column.repeat,
+        table_kind_unit_width(column.kind),
+        "binary-table column width",
+      ) {
+      Err(error) => return Err(error)
+      Ok(value) => value
+    }
+    if column.width != width {
+      return Err(
+        InvalidTableCell(
+          column.index,
+          "expected width \{width}, got \{column.width}",
+        ),
+      )
+    }
+    offset = match checked_sum(offset, width, "binary-table row width") {
+      Err(error) => return Err(error)
+      Ok(value) => value
+    }
+  }
+  if offset != table.row_length {
+    return Err(InvalidTableRowWidth(table.row_length, offset))
+  }
+  Ok(())
+}
+
+///|
 fn parse_table_column(
   header : Header,
   index : Int,
@@ -57,15 +113,12 @@ fn parse_table_column(
     'D' => Float64
     _ => return Err(UnsupportedTableFormat(format_keyword, format))
   }
-  let unit_width = match code {
-    'A' | 'B' => 1
-    'I' => 2
-    'J' | 'E' => 4
-    'K' | 'D' => 8
-    _ => return Err(UnsupportedTableFormat(format_keyword, format))
-  }
   let width = match
-    checked_product(repeat, unit_width, "binary-table column width") {
+    checked_product(
+      repeat,
+      table_kind_unit_width(kind),
+      "binary-table column width",
+    ) {
     Err(error) => return Err(error)
     Ok(value) => value
   }
@@ -137,7 +190,11 @@ pub fn parse_binary_table(hdu : Hdu) -> Result[BinaryTable, FitsError] {
   if row_bytes > hdu.data_length {
     return Err(InvalidDataLength(row_bytes, hdu.data_length))
   }
-  Ok({ columns, row_length, row_count, data_offset: hdu.data_offset, })
+  let table = { columns, row_length, row_count, data_offset: hdu.data_offset, }
+  match validate_table_columns(table) {
+    Err(error) => Err(error)
+    Ok(_) => Ok(table)
+  }
 }
 
 ///|
@@ -164,6 +221,10 @@ pub fn decode_binary_row(
   table : BinaryTable,
   row_index : Int,
 ) -> Result[Array[TableValue], FitsError] {
+  match validate_table_columns(table) {
+    Err(error) => return Err(error)
+    Ok(_) => ()
+  }
   if row_index < 0 || row_index >= table.row_count {
     return Err(TableRowOutOfRange(row_index, table.row_count))
   }
@@ -246,4 +307,188 @@ pub fn decode_binary_row(
     }
   }
   Ok(cells)
+}
+
+///|
+fn invalid_cell_type(column : TableColumn) -> FitsError {
+  let expected = match column.kind {
+    Ascii => "text"
+    UnsignedByte | Int16 | Int32 | Int64 => "integer array"
+    Float32 | Float64 => "real array"
+  }
+  InvalidTableCell(column.index, "expected \{expected}")
+}
+
+///|
+fn encode_ascii_cell(
+  output : Array[Byte],
+  column : TableColumn,
+  text : String,
+) -> Result[Unit, FitsError] {
+  let chars = text.to_array()
+  if chars.length() > column.repeat {
+    return Err(
+      InvalidTableCell(
+        column.index,
+        "text has \{chars.length()} characters; maximum is \{column.repeat}",
+      ),
+    )
+  }
+  for ch in chars {
+    let value = ch.to_int()
+    if value < 0x20 || value > 0x7e {
+      return Err(InvalidTableCell(column.index, "text must be printable ASCII"))
+    }
+    output.push(value.to_byte())
+  }
+  for index = chars.length(); index < column.repeat; index = index + 1 {
+    output.push(b' ')
+  }
+  Ok(())
+}
+
+///|
+fn encode_integer_cell(
+  output : Array[Byte],
+  column : TableColumn,
+  values : Array[Int64],
+) -> Result[Unit, FitsError] {
+  if values.length() != column.repeat {
+    return Err(
+      InvalidTableCell(
+        column.index,
+        "requires \{column.repeat} integers, got \{values.length()}",
+      ),
+    )
+  }
+  let bitpix = match column.kind {
+    UnsignedByte => 8
+    Int16 => 16
+    Int32 => 32
+    Int64 => 64
+    _ => return Err(invalid_cell_type(column))
+  }
+  let width = table_kind_unit_width(column.kind)
+  for value in values {
+    if !integer_value_fits(value, bitpix) {
+      return Err(
+        InvalidTableCell(
+          column.index,
+          "integer \{value} is outside the \{column.format} range",
+        ),
+      )
+    }
+    append_integer_be(output, value, width)
+  }
+  Ok(())
+}
+
+///|
+fn encode_real_cell(
+  output : Array[Byte],
+  column : TableColumn,
+  values : Array[Double],
+) -> Result[Unit, FitsError] {
+  if values.length() != column.repeat {
+    return Err(
+      InvalidTableCell(
+        column.index,
+        "requires \{column.repeat} real values, got \{values.length()}",
+      ),
+    )
+  }
+  for index, value in values {
+    match column.kind {
+      Float32 => {
+        let narrowed = Float::from_double(value)
+        if !value.is_nan() && !value.is_inf() && narrowed.is_inf() {
+          return Err(
+            InvalidTableCell(
+              column.index,
+              "real value \{index} overflows binary32",
+            ),
+          )
+        }
+        append_uint32_be(output, narrowed.reinterpret_as_uint())
+      }
+      Float64 => append_uint64_be(output, value.reinterpret_as_uint64())
+      _ => return Err(invalid_cell_type(column))
+    }
+  }
+  Ok(())
+}
+
+///|
+/// Encode one fixed-width binary-table row in FITS network byte order.
+///
+/// Text is padded with spaces to its declared width. Numeric cells must supply
+/// exactly the column repeat count, and narrowing conversions are checked.
+pub fn encode_binary_row(
+  table : BinaryTable,
+  cells : Array[TableValue],
+) -> Result[Bytes, FitsError] {
+  match validate_table_columns(table) {
+    Err(error) => return Err(error)
+    Ok(_) => ()
+  }
+  if cells.length() != table.columns.length() {
+    return Err(InvalidTableCellCount(table.columns.length(), cells.length()))
+  }
+  let output = Array(capacity=table.row_length)
+  for index, column in table.columns {
+    let result = match column.kind {
+      Ascii =>
+        match cells[index] {
+          Text(text) => encode_ascii_cell(output, column, text)
+          _ => Err(invalid_cell_type(column))
+        }
+      UnsignedByte | Int16 | Int32 | Int64 =>
+        match cells[index] {
+          Integers(values) => encode_integer_cell(output, column, values)
+          _ => Err(invalid_cell_type(column))
+        }
+      Float32 | Float64 =>
+        match cells[index] {
+          Reals(values) => encode_real_cell(output, column, values)
+          _ => Err(invalid_cell_type(column))
+        }
+    }
+    match result {
+      Err(error) => return Err(error)
+      Ok(_) => ()
+    }
+  }
+  Ok(Bytes::from_array(output))
+}
+
+///|
+/// Encode every row of a fixed-width binary table as one contiguous data unit.
+pub fn encode_binary_rows(
+  table : BinaryTable,
+  rows : Array[Array[TableValue]],
+) -> Result[Bytes, FitsError] {
+  match validate_table_columns(table) {
+    Err(error) => return Err(error)
+    Ok(_) => ()
+  }
+  if table.row_count < 0 {
+    return Err(InvalidParameter("NAXIS2", table.row_count))
+  }
+  if rows.length() != table.row_count {
+    return Err(InvalidTableRowCount(table.row_count, rows.length()))
+  }
+  let byte_length = match
+    checked_product(table.row_length, table.row_count, "binary-table row area") {
+    Err(error) => return Err(error)
+    Ok(value) => value
+  }
+  let output = Array(capacity=byte_length)
+  for row in rows {
+    let encoded = match encode_binary_row(table, row) {
+      Err(error) => return Err(error)
+      Ok(value) => value
+    }
+    append_bytes(output, encoded)
+  }
+  Ok(Bytes::from_array(output))
 }

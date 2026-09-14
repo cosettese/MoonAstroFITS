@@ -100,3 +100,10 @@ numeric fields as arrays, trims only FITS ASCII padding, and interprets numeric
 bytes in network order. Variable-length `P`/`Q` descriptors, heap data, bits,
 logical fields, and complex values remain explicit unsupported formats until
 their representation can be modeled without lossy shortcuts.
+
+`encode_binary_row` is the byte-level inverse for the same fixed-width schema.
+It requires one correctly typed cell per column, enforces repeat counts and
+integer ranges, rejects finite binary32 overflow, and space-pads printable
+ASCII without truncation. `encode_binary_rows` additionally requires exactly
+`NAXIS2` rows and emits the contiguous payload accepted by extension-HDU
+assembly. Both paths revalidate the public column layout before writing bytes.

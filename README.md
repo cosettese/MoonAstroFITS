@@ -38,6 +38,9 @@ so the same parser can run on MoonBit's portable targets.
   `D` column formats;
 - typed binary-table row decoding with repeat counts, names, and checked column
   offsets.
+- byte-exact fixed-width binary-table row encoding with ASCII padding and
+  numeric range checks;
+- complete row-set encoding for direct extension-HDU assembly.
 
 Run the checks and the in-memory example:
 
@@ -48,7 +51,7 @@ moon run cmd/main
 ```
 
 The next milestones will add variable-length array descriptors, heap decoding,
-and binary-table writing.
+and higher-level table construction helpers.
 
 ## Scope and origin
 

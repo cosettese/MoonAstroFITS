@@ -12,6 +12,10 @@ pub fn decode_floating_image(Bytes, Hdu) -> Result[FloatingImage, FitsError]
 
 pub fn decode_integer_image(Bytes, Hdu) -> Result[IntegerImage, FitsError]
 
+pub fn encode_binary_row(BinaryTable, Array[TableValue]) -> Result[Bytes, FitsError]
+
+pub fn encode_binary_rows(BinaryTable, Array[Array[TableValue]]) -> Result[Bytes, FitsError]
+
 pub fn encode_extension_hdu(Header, Bytes) -> Result[Bytes, FitsError]
 
 pub fn encode_floating_pixels(FloatingImage, Int) -> Result[Bytes, FitsError]
@@ -78,6 +82,9 @@ pub(all) enum FitsError {
   UnsupportedTableFormat(String, String)
   InvalidTableRowWidth(Int, Int)
   TableRowOutOfRange(Int, Int)
+  InvalidTableRowCount(Int, Int)
+  InvalidTableCellCount(Int, Int)
+  InvalidTableCell(Int, String)
 } derive(Eq, @debug.Debug)
 pub fn FitsError::message(Self) -> String
 
