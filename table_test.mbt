@@ -282,3 +282,74 @@ test "reject caller-constructed table layouts before encoding" {
     is Err(@moonastrofits.InvalidTableCell(1, _)),
   )
 }
+
+///|
+test "decode and encode tri-state logical table cells" {
+  let cards = [
+    "XTENSION= 'BINTABLE'", "BITPIX  =                    8", "NAXIS   =                    2",
+    "NAXIS1  =                    4", "NAXIS2  =                    1", "PCOUNT  =                    0",
+    "GCOUNT  =                    1", "TFIELDS =                    2", "TTYPE1  = 'FLAGS'",
+    "TFORM1  = '3L'", "TTYPE2  = 'QUALITY'", "TFORM2  = '1B'", "END",
+  ]
+  let data = binary_table_file(cards, b"TF\x00\x07")
+  let table = @moonastrofits.parse_binary_table(
+    @moonastrofits.parse_fits(data).unwrap().hdus[1],
+  ).unwrap()
+  let row = [
+    @moonastrofits.Logicals([Some(true), Some(false), None]),
+    @moonastrofits.Integers([7L]),
+  ]
+  assert_eq(@moonastrofits.decode_binary_row(data, table, 0).unwrap(), row)
+  assert_eq(
+    @moonastrofits.encode_binary_row(table, row).unwrap(),
+    b"TF\x00\x07",
+  )
+  assert_true(
+    @moonastrofits.encode_binary_row(table, [
+      @moonastrofits.Logicals([Some(true)]),
+      @moonastrofits.Integers([7L]),
+    ])
+    is Err(@moonastrofits.InvalidTableCell(1, _)),
+  )
+}
+
+///|
+test "reject illegal logical bytes" {
+  let data = binary_table_file(
+    [
+      "XTENSION= 'BINTABLE'", "BITPIX  =                    8", "NAXIS   =                    2",
+      "NAXIS1  =                    1", "NAXIS2  =                    1", "PCOUNT  =                    0",
+      "GCOUNT  =                    1", "TFIELDS =                    1", "TFORM1  = '1L'",
+      "END",
+    ],
+    b"X",
+  )
+  let table = @moonastrofits.parse_binary_table(
+    @moonastrofits.parse_fits(data).unwrap().hdus[1],
+  ).unwrap()
+  assert_true(
+    @moonastrofits.decode_binary_row(data, table, 0)
+    is Err(@moonastrofits.InvalidTableCell(1, _)),
+  )
+}
+
+///|
+test "preserve zero-repeat empty table fields" {
+  let data = binary_table_file(
+    [
+      "XTENSION= 'BINTABLE'", "BITPIX  =                    8", "NAXIS   =                    2",
+      "NAXIS1  =                    1", "NAXIS2  =                    1", "PCOUNT  =                    0",
+      "GCOUNT  =                    1", "TFIELDS =                    2", "TFORM1  = '0L'",
+      "TFORM2  = '1B'", "END",
+    ],
+    b"\x09",
+  )
+  let table = @moonastrofits.parse_binary_table(
+    @moonastrofits.parse_fits(data).unwrap().hdus[1],
+  ).unwrap()
+  assert_eq(table.columns[0].repeat, 0)
+  assert_eq(table.columns[0].width, 0)
+  let row = [@moonastrofits.Logicals([]), @moonastrofits.Integers([9L])]
+  assert_eq(@moonastrofits.decode_binary_row(data, table, 0).unwrap(), row)
+  assert_eq(@moonastrofits.encode_binary_row(table, row).unwrap(), b"\x09")
+}

@@ -12,7 +12,7 @@ fn required_table_integer(
 ///|
 fn table_kind_unit_width(kind : TableColumnKind) -> Int {
   match kind {
-    Ascii | UnsignedByte => 1
+    Ascii | Logical | UnsignedByte => 1
     Int16 => 2
     Int32 | Float32 => 4
     Int64 | Float64 => 8
@@ -26,8 +26,8 @@ fn validate_table_columns(table : BinaryTable) -> Result[Unit, FitsError] {
   }
   let mut offset = 0
   for column in table.columns {
-    if column.repeat < 1 {
-      return Err(InvalidTableCell(column.index, "repeat must be positive"))
+    if column.repeat < 0 {
+      return Err(InvalidTableCell(column.index, "repeat must be non-negative"))
     }
     if column.offset != offset {
       return Err(
@@ -99,12 +99,13 @@ fn parse_table_column(
   if position == 0 {
     repeat = 1
   }
-  if repeat < 1 || position + 1 != chars.length() {
+  if position + 1 != chars.length() {
     return Err(UnsupportedTableFormat(format_keyword, format))
   }
   let code = chars[position]
   let kind = match code {
     'A' => Ascii
+    'L' => Logical
     'B' => UnsignedByte
     'I' => Int16
     'J' => Int32
@@ -137,8 +138,8 @@ fn parse_table_column(
 ///|
 /// Parse the fixed-width schema of a `BINTABLE` extension.
 ///
-/// The initial slice supports scalar and repeated `A`, `B`, `I`, `J`, `K`,
-/// `E`, and `D` fields. Bit arrays, logical values, complex values, and heap
+/// The initial slice supports scalar, repeated, and empty `A`, `L`, `B`, `I`,
+/// `J`, `K`, `E`, and `D` fields. Bit arrays, complex values, and heap
 /// descriptors are rejected explicitly rather than decoded ambiguously.
 pub fn parse_binary_table(hdu : Hdu) -> Result[BinaryTable, FitsError] {
   match hdu.kind {
@@ -262,6 +263,24 @@ pub fn decode_binary_row(
           Err(error) => return Err(error)
           Ok(value) => cells.push(Text(value))
         }
+      Logical => {
+        let values = []
+        for index = 0; index < column.repeat; index = index + 1 {
+          match data[start + index] {
+            b'T' => values.push(Some(true))
+            b'F' => values.push(Some(false))
+            b'\x00' => values.push(None)
+            byte =>
+              return Err(
+                InvalidTableCell(
+                  column.index,
+                  "illegal logical byte \{byte.to_int()} at element \{index}",
+                ),
+              )
+          }
+        }
+        cells.push(Logicals(values))
+      }
       UnsignedByte => {
         let values = []
         for index = 0; index < column.repeat; index = index + 1 {
@@ -313,10 +332,37 @@ pub fn decode_binary_row(
 fn invalid_cell_type(column : TableColumn) -> FitsError {
   let expected = match column.kind {
     Ascii => "text"
+    Logical => "logical array"
     UnsignedByte | Int16 | Int32 | Int64 => "integer array"
     Float32 | Float64 => "real array"
   }
   InvalidTableCell(column.index, "expected \{expected}")
+}
+
+///|
+fn encode_logical_cell(
+  output : Array[Byte],
+  column : TableColumn,
+  values : Array[Bool?],
+) -> Result[Unit, FitsError] {
+  if values.length() != column.repeat {
+    return Err(
+      InvalidTableCell(
+        column.index,
+        "requires \{column.repeat} logical values, got \{values.length()}",
+      ),
+    )
+  }
+  for value in values {
+    output.push(
+      match value {
+        Some(true) => b'T'
+        Some(false) => b'F'
+        None => b'\x00'
+      },
+    )
+  }
+  Ok(())
 }
 
 ///|
@@ -440,6 +486,11 @@ pub fn encode_binary_row(
       Ascii =>
         match cells[index] {
           Text(text) => encode_ascii_cell(output, column, text)
+          _ => Err(invalid_cell_type(column))
+        }
+      Logical =>
+        match cells[index] {
+          Logicals(values) => encode_logical_cell(output, column, values)
           _ => Err(invalid_cell_type(column))
         }
       UnsignedByte | Int16 | Int32 | Int64 =>

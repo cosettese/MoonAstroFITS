@@ -93,6 +93,7 @@ pub fn FloatingImage::physical_values(self : FloatingImage) -> Array[Double] {
 /// The fixed-width storage representation of one FITS binary-table column.
 pub(all) enum TableColumnKind {
   Ascii
+  Logical
   UnsignedByte
   Int16
   Int32
@@ -126,6 +127,7 @@ pub(all) struct BinaryTable {
 /// One decoded fixed-width binary-table cell.
 pub(all) enum TableValue {
   Text(String)
+  Logicals(Array[Bool?])
   Integers(Array[Int64])
   Reals(Array[Double])
 } derive(Eq, Debug)

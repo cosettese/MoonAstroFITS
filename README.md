@@ -34,13 +34,14 @@ so the same parser can run on MoonBit's portable targets.
 - standards-aligned space header padding and zero data padding.
 - IMAGE and generic extension-HDU assembly;
 - required extension keyword ordering and parameter-byte sizing.
-- fixed-width `BINTABLE` schema parsing for `A`, `B`, `I`, `J`, `K`, `E`, and
-  `D` column formats;
+- fixed-width `BINTABLE` schema parsing for `A`, `L`, `B`, `I`, `J`, `K`, `E`,
+  and `D` column formats, including zero-repeat empty fields;
 - typed binary-table row decoding with repeat counts, names, and checked column
   offsets.
 - byte-exact fixed-width binary-table row encoding with ASCII padding and
   numeric range checks;
 - complete row-set encoding for direct extension-HDU assembly.
+- tri-state logical column round trips using `T`, `F`, and null bytes.
 
 Run the checks and the in-memory example:
 

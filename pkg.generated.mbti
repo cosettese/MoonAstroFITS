@@ -152,6 +152,7 @@ pub(all) struct TableColumn {
 
 pub(all) enum TableColumnKind {
   Ascii
+  Logical
   UnsignedByte
   Int16
   Int32
@@ -162,6 +163,7 @@ pub(all) enum TableColumnKind {
 
 pub(all) enum TableValue {
   Text(String)
+  Logicals(Array[Bool?])
   Integers(Array[Int64])
   Reals(Array[Double])
 } derive(Eq, @debug.Debug)
