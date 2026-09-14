@@ -12,6 +12,8 @@ pub fn decode_integer_image(Bytes, Hdu) -> Result[IntegerImage, FitsError]
 
 pub fn encode_header(Header) -> Result[Bytes, FitsError]
 
+pub fn encode_integer_pixels(IntegerImage, Int) -> Result[Bytes, FitsError]
+
 pub fn parse_fits(Bytes) -> Result[FitsFile, FitsError]
 
 pub fn parse_header(Bytes) -> Result[Header, FitsError]
@@ -50,6 +52,9 @@ pub(all) enum FitsError {
   UnsupportedImageLayout(Int)
   InvalidReal(String, String)
   CardTooLong(Int, Int)
+  InvalidSampleCount(Int, Int)
+  PixelOutOfRange(Int, Int64, Int)
+  BlankOutOfRange(Int64, Int)
 } derive(Eq, @debug.Debug)
 pub fn FitsError::message(Self) -> String
 

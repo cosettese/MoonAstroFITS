@@ -113,6 +113,9 @@ pub(all) enum FitsError {
   UnsupportedImageLayout(Int)
   InvalidReal(String, String)
   CardTooLong(Int, Int)
+  InvalidSampleCount(Int, Int)
+  PixelOutOfRange(Int, Int64, Int)
+  BlankOutOfRange(Int64, Int)
 } derive(Eq, Debug)
 
 ///|
@@ -156,5 +159,11 @@ pub fn FitsError::message(self : FitsError) -> String {
       "FITS keyword '\{keyword}' does not contain a finite real value: '\{value}'"
     CardTooLong(record, length) =>
       "encoded FITS header record \{record + 1} is \{length} bytes; maximum is 80"
+    InvalidSampleCount(expected, actual) =>
+      "FITS image shape requires \{expected} samples, got \{actual}"
+    PixelOutOfRange(index, value, bitpix) =>
+      "pixel \{index} value \{value} is outside the BITPIX=\{bitpix} range"
+    BlankOutOfRange(value, bitpix) =>
+      "BLANK value \{value} is outside the BITPIX=\{bitpix} range"
   }
 }

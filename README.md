@@ -26,6 +26,8 @@ so the same parser can run on MoonBit's portable targets.
 - preservation of floating-point NaN, infinities, and signed zero.
 - deterministic 80-byte card and 2880-byte header encoding;
 - lexical `parse → encode → parse` header round trips.
+- range-checked big-endian integer pixel encoding;
+- byte-exact integer `encode → decode` round trips.
 
 Run the checks and the in-memory example:
 
@@ -35,8 +37,8 @@ moon test --deny-warn
 moon run cmd/main
 ```
 
-The next milestones will add complete image-HDU writing and scientific table
-support.
+The next milestones will add floating-point pixel encoding, complete image-HDU
+assembly, and scientific table support.
 
 ## Scope and origin
 

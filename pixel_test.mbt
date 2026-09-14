@@ -159,3 +159,80 @@ test "floating decoder rejects integer BITPIX" {
     is Err(@moonastrofits.UnsupportedFloatingBitpix(_)),
   )
 }
+
+///|
+fn integer_image(
+  axes : Array[Int],
+  raw : Array[Int64],
+  blank? : Int64? = None,
+) -> @moonastrofits.IntegerImage {
+  { axes, raw, bscale: 1.0, bzero: 0.0, blank, }
+}
+
+///|
+test "encode integer FITS pixels byte for byte" {
+  assert_eq(
+    @moonastrofits.encode_integer_pixels(integer_image([2], [0L, 255L]), 8),
+    Ok(b"\x00\xFF"),
+  )
+  assert_eq(
+    @moonastrofits.encode_integer_pixels(
+      integer_image([4], [-32768L, -1L, 0L, 32767L]),
+      16,
+    ),
+    Ok(b"\x80\x00\xFF\xFF\x00\x00\x7F\xFF"),
+  )
+  assert_eq(
+    @moonastrofits.encode_integer_pixels(
+      integer_image([2], [-2147483648L, 2147483647L]),
+      32,
+    ),
+    Ok(b"\x80\x00\x00\x00\x7F\xFF\xFF\xFF"),
+  )
+  assert_eq(
+    @moonastrofits.encode_integer_pixels(integer_image([2], [-1L, 256L]), 64),
+    Ok(b"\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x00\x00\x00\x00\x00\x00\x01\x00"),
+  )
+}
+
+///|
+test "integer pixel encoding round trips through FITS decoding" {
+  let original = integer_image([3], [-2L, 0L, 3L], blank=Some(0L))
+  let encoded = @moonastrofits.encode_integer_pixels(original, 16).unwrap()
+  let data = image_file(
+    [
+      "SIMPLE  =                    T", "BITPIX  =                   16", "NAXIS   =                    1",
+      "NAXIS1  =                    3", "BLANK   =                    0", "END",
+    ],
+    encoded.to_array(),
+  )
+  let hdu = @moonastrofits.parse_fits(data).unwrap().primary().unwrap()
+  assert_eq(@moonastrofits.decode_integer_image(data, hdu).unwrap(), original)
+}
+
+///|
+test "integer pixel encoding rejects invalid shape and range" {
+  assert_true(
+    @moonastrofits.encode_integer_pixels(integer_image([2], [1L]), 8)
+    is Err(@moonastrofits.InvalidSampleCount(_, _)),
+  )
+  assert_true(
+    @moonastrofits.encode_integer_pixels(integer_image([-1], []), 8)
+    is Err(@moonastrofits.InvalidAxis(_, _)),
+  )
+  assert_true(
+    @moonastrofits.encode_integer_pixels(integer_image([1], [256L]), 8)
+    is Err(@moonastrofits.PixelOutOfRange(_, _, _)),
+  )
+  assert_true(
+    @moonastrofits.encode_integer_pixels(
+      integer_image([1], [1L], blank=Some(-1L)),
+      8,
+    )
+    is Err(@moonastrofits.BlankOutOfRange(_, _)),
+  )
+  assert_true(
+    @moonastrofits.encode_integer_pixels(integer_image([1], [1L]), -32)
+    is Err(@moonastrofits.UnsupportedIntegerBitpix(_)),
+  )
+}

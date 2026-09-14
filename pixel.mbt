@@ -314,3 +314,85 @@ pub fn decode_floating_image(
   }
   Ok({ axes: layout.axes, raw, bscale, bzero, })
 }
+
+///|
+fn integer_value_fits(value : Int64, bitpix : Int) -> Bool {
+  match bitpix {
+    8 => value >= 0L && value <= 255L
+    16 => value >= -32768L && value <= 32767L
+    32 => value >= -2147483648L && value <= 2147483647L
+    64 => true
+    _ => false
+  }
+}
+
+///|
+fn image_sample_count(axes : Array[Int]) -> Result[Int, FitsError] {
+  if axes.length() == 0 {
+    return Ok(0)
+  }
+  let mut count = 1
+  for index, length in axes {
+    if length < 0 {
+      return Err(InvalidAxis(index + 1, length))
+    }
+    count = match checked_product(count, length, "pixel count") {
+      Err(error) => return Err(error)
+      Ok(value) => value
+    }
+  }
+  Ok(count)
+}
+
+///|
+fn append_integer_be(output : Array[Byte], value : Int64, width : Int) -> Unit {
+  let bits = value.reinterpret_as_uint64()
+  for index = 0; index < width; index = index + 1 {
+    let shift = (width - index - 1) * 8
+    output.push((bits >> shift).to_byte())
+  }
+}
+
+///|
+/// Encode raw integer image samples in FITS big-endian byte order.
+///
+/// The declared axes must contain exactly one entry per raw sample. Values and
+/// an optional `BLANK` sentinel are range-checked for the requested positive
+/// integer `BITPIX`; no clipping or scaling is performed.
+pub fn encode_integer_pixels(
+  image : IntegerImage,
+  bitpix : Int,
+) -> Result[Bytes, FitsError] {
+  let bytes_per_pixel = match bitpix {
+    8 => 1
+    16 => 2
+    32 => 4
+    64 => 8
+    value => return Err(UnsupportedIntegerBitpix(value))
+  }
+  let expected = match image_sample_count(image.axes) {
+    Err(error) => return Err(error)
+    Ok(value) => value
+  }
+  if expected != image.raw.length() {
+    return Err(InvalidSampleCount(expected, image.raw.length()))
+  }
+  match image.blank {
+    Some(value) if !integer_value_fits(value, bitpix) =>
+      return Err(BlankOutOfRange(value, bitpix))
+    _ => ()
+  }
+  let byte_length = match
+    checked_product(expected, bytes_per_pixel, "encoded integer image") {
+    Err(error) => return Err(error)
+    Ok(value) => value
+  }
+  let output = Array(capacity=byte_length)
+  for index, value in image.raw {
+    if !integer_value_fits(value, bitpix) {
+      return Err(PixelOutOfRange(index, value, bitpix))
+    }
+    append_integer_be(output, value, bytes_per_pixel)
+  }
+  Ok(Bytes::from_array(output))
+}

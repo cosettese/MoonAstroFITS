@@ -54,3 +54,11 @@ metadata. It uses conventional right alignment for short non-string values,
 keeps quoted strings adjacent to the value indicator, rejects lossy truncation
 and non-ASCII output, requires a terminal `END`, and pads only with spaces.
 Reparsing the result preserves card order, values, and comments.
+
+## Integer pixel encoding
+
+`encode_integer_pixels` is the storage-level inverse of integer decoding. It
+validates the axis product, sample count, `BLANK` sentinel, and every raw value
+before emitting big-endian bytes. The encoder rejects overflow instead of
+clipping and deliberately leaves `BSCALE`/`BZERO` unchanged because they are
+header semantics, not stored-pixel transformations.
