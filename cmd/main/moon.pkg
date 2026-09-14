@@ -1,0 +1,5 @@
+import {
+  "cosettese/moonastrofits" @fits,
+}
+
+pkgtype(kind: "executable")

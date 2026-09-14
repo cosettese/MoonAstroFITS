@@ -1,0 +1,44 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "cosettese/moonastrofits"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn parse_header(Bytes) -> Result[Header, FitsError]
+
+pub fn parse_header_at(Bytes, Int) -> Result[Header, FitsError]
+
+// Errors
+
+// Types and methods
+pub(all) struct Card {
+  keyword : String
+  value : String?
+  comment : String?
+  record_index : Int
+} derive(Eq, @debug.Debug)
+
+pub(all) enum FitsError {
+  Truncated(Int, Int, Int)
+  NonAscii(Int, Byte)
+  InvalidKeyword(Int, String)
+  InvalidCard(Int, String)
+  MissingEnd(Int)
+  InvalidPadding(Int, Byte)
+  MissingKeyword(String)
+  InvalidInteger(String, String)
+} derive(Eq, @debug.Debug)
+pub fn FitsError::message(Self) -> String
+
+pub(all) struct Header {
+  cards : Array[Card]
+  data_offset : Int
+} derive(Eq, @debug.Debug)
+pub fn Header::get(Self, String) -> Card?
+pub fn Header::get_all(Self, String) -> Array[Card]
+
+// Type aliases
+
+// Traits
