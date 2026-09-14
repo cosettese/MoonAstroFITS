@@ -6,6 +6,8 @@ import {
 }
 
 // Values
+pub fn decode_binary_row(Bytes, BinaryTable, Int) -> Result[Array[TableValue], FitsError]
+
 pub fn decode_floating_image(Bytes, Hdu) -> Result[FloatingImage, FitsError]
 
 pub fn decode_integer_image(Bytes, Hdu) -> Result[IntegerImage, FitsError]
@@ -20,6 +22,8 @@ pub fn encode_integer_pixels(IntegerImage, Int) -> Result[Bytes, FitsError]
 
 pub fn encode_primary_hdu(Header, Bytes) -> Result[Bytes, FitsError]
 
+pub fn parse_binary_table(Hdu) -> Result[BinaryTable, FitsError]
+
 pub fn parse_fits(Bytes) -> Result[FitsFile, FitsError]
 
 pub fn parse_header(Bytes) -> Result[Header, FitsError]
@@ -29,6 +33,13 @@ pub fn parse_header_at(Bytes, Int) -> Result[Header, FitsError]
 // Errors
 
 // Types and methods
+pub(all) struct BinaryTable {
+  columns : Array[TableColumn]
+  row_length : Int
+  row_count : Int
+  data_offset : Int
+} derive(Eq, @debug.Debug)
+
 pub(all) struct Card {
   keyword : String
   value : String?
@@ -63,6 +74,10 @@ pub(all) enum FitsError {
   BlankOutOfRange(Int64, Int)
   FloatingPixelOverflow(Int, Int)
   InvalidDataLength(Int, Int)
+  NotBinaryTable(Int)
+  UnsupportedTableFormat(String, String)
+  InvalidTableRowWidth(Int, Int)
+  TableRowOutOfRange(Int, Int)
 } derive(Eq, @debug.Debug)
 pub fn FitsError::message(Self) -> String
 
@@ -117,6 +132,32 @@ pub(all) struct IntegerImage {
   blank : Int64?
 } derive(Eq, @debug.Debug)
 pub fn IntegerImage::physical_values(Self) -> Array[Double?]
+
+pub(all) struct TableColumn {
+  index : Int
+  name : String?
+  format : String
+  repeat : Int
+  offset : Int
+  width : Int
+  kind : TableColumnKind
+} derive(Eq, @debug.Debug)
+
+pub(all) enum TableColumnKind {
+  Ascii
+  UnsignedByte
+  Int16
+  Int32
+  Int64
+  Float32
+  Float64
+} derive(Eq, @debug.Debug)
+
+pub(all) enum TableValue {
+  Text(String)
+  Integers(Array[Int64])
+  Reals(Array[Double])
+} derive(Eq, @debug.Debug)
 
 // Type aliases
 

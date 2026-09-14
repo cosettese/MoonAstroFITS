@@ -85,3 +85,18 @@ adds zero bytes to the next 2880-byte boundary.
 analyzes the header in extension mode. This requires an `XTENSION` card plus
 ordered `PCOUNT` and `GCOUNT`, supports both IMAGE and generic extensions, and
 uses the general grouped-data formula when validating the supplied payload.
+
+## Fixed-width binary tables
+
+`parse_binary_table` turns the `TFIELDS`, `TTYPEn`, and `TFORMn` metadata of a
+`BINTABLE` extension into checked row geometry. The first supported storage
+formats are ASCII text, unsigned bytes, signed 16/32/64-bit integers, and IEEE
+binary32/binary64 values, including fixed repeat counts. Column widths must add
+up exactly to `NAXIS1`, and the declared row area must fit inside the HDU data
+unit before any cell is read.
+
+`decode_binary_row` returns one typed value per column, preserves repeated
+numeric fields as arrays, trims only FITS ASCII padding, and interprets numeric
+bytes in network order. Variable-length `P`/`Q` descriptors, heap data, bits,
+logical fields, and complex values remain explicit unsupported formats until
+their representation can be modeled without lossy shortcuts.

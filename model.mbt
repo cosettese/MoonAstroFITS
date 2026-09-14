@@ -90,6 +90,47 @@ pub fn FloatingImage::physical_values(self : FloatingImage) -> Array[Double] {
 }
 
 ///|
+/// The fixed-width storage representation of one FITS binary-table column.
+pub(all) enum TableColumnKind {
+  Ascii
+  UnsignedByte
+  Int16
+  Int32
+  Int64
+  Float32
+  Float64
+} derive(Eq, Debug)
+
+///|
+/// A validated fixed-width FITS binary-table column.
+pub(all) struct TableColumn {
+  index : Int
+  name : String?
+  format : String
+  repeat : Int
+  offset : Int
+  width : Int
+  kind : TableColumnKind
+} derive(Eq, Debug)
+
+///|
+/// Row geometry and column schema for a fixed-width BINTABLE extension.
+pub(all) struct BinaryTable {
+  columns : Array[TableColumn]
+  row_length : Int
+  row_count : Int
+  data_offset : Int
+} derive(Eq, Debug)
+
+///|
+/// One decoded fixed-width binary-table cell.
+pub(all) enum TableValue {
+  Text(String)
+  Integers(Array[Int64])
+  Reals(Array[Double])
+} derive(Eq, Debug)
+
+///|
 /// Source-aware failures from FITS structural parsing.
 pub(all) enum FitsError {
   Truncated(Int, Int, Int)
@@ -118,6 +159,10 @@ pub(all) enum FitsError {
   BlankOutOfRange(Int64, Int)
   FloatingPixelOverflow(Int, Int)
   InvalidDataLength(Int, Int)
+  NotBinaryTable(Int)
+  UnsupportedTableFormat(String, String)
+  InvalidTableRowWidth(Int, Int)
+  TableRowOutOfRange(Int, Int)
 } derive(Eq, Debug)
 
 ///|
@@ -171,5 +216,12 @@ pub fn FitsError::message(self : FitsError) -> String {
       "pixel \{index} is finite but overflows BITPIX=\{bitpix}"
     InvalidDataLength(expected, actual) =>
       "FITS header requires \{expected} data bytes, got \{actual}"
+    NotBinaryTable(index) => "FITS HDU \{index} is not a binary table"
+    UnsupportedTableFormat(keyword, format) =>
+      "FITS keyword '\{keyword}' uses unsupported binary-table format '\{format}'"
+    InvalidTableRowWidth(expected, actual) =>
+      "FITS binary-table row declares \{expected} bytes but its columns occupy \{actual}"
+    TableRowOutOfRange(index, count) =>
+      "FITS binary-table row \{index} is outside the \{count}-row table"
   }
 }

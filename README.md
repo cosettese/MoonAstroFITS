@@ -34,6 +34,10 @@ so the same parser can run on MoonBit's portable targets.
 - standards-aligned space header padding and zero data padding.
 - IMAGE and generic extension-HDU assembly;
 - required extension keyword ordering and parameter-byte sizing.
+- fixed-width `BINTABLE` schema parsing for `A`, `B`, `I`, `J`, `K`, `E`, and
+  `D` column formats;
+- typed binary-table row decoding with repeat counts, names, and checked column
+  offsets.
 
 Run the checks and the in-memory example:
 
@@ -43,7 +47,8 @@ moon test --deny-warn
 moon run cmd/main
 ```
 
-The next milestones will add scientific binary-table schemas and row decoding.
+The next milestones will add variable-length array descriptors, heap decoding,
+and binary-table writing.
 
 ## Scope and origin
 
