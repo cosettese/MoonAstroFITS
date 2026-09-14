@@ -112,6 +112,7 @@ pub(all) enum FitsError {
   UnsupportedFloatingBitpix(Int)
   UnsupportedImageLayout(Int)
   InvalidReal(String, String)
+  CardTooLong(Int, Int)
 } derive(Eq, Debug)
 
 ///|
@@ -153,5 +154,7 @@ pub fn FitsError::message(self : FitsError) -> String {
       "FITS HDU \{index} uses random groups or parameters and cannot be decoded as a contiguous image"
     InvalidReal(keyword, value) =>
       "FITS keyword '\{keyword}' does not contain a finite real value: '\{value}'"
+    CardTooLong(record, length) =>
+      "encoded FITS header record \{record + 1} is \{length} bytes; maximum is 80"
   }
 }

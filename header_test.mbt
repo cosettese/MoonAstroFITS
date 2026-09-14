@@ -82,13 +82,17 @@ test "reject non-ASCII header bytes and non-space padding" {
 }
 
 ///|
-test "reject lowercase and valued END keywords" {
+test "reject lowercase and non-empty END cards" {
   assert_true(
     @moonastrofits.parse_header(test_header(["simple  = T", "END"]))
     is Err(@moonastrofits.InvalidKeyword(_, _)),
   )
   assert_true(
     @moonastrofits.parse_header(test_header(["END     = T"]))
+    is Err(@moonastrofits.InvalidCard(_, _)),
+  )
+  assert_true(
+    @moonastrofits.parse_header(test_header(["END     trailing text"]))
     is Err(@moonastrofits.InvalidCard(_, _)),
   )
 }

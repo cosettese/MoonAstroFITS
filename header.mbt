@@ -106,8 +106,20 @@ fn parse_card(
     Ok(_) => ()
   }
   let has_value = data[offset + 8] == b'=' && data[offset + 9] == b' '
-  if keyword == "END" && has_value {
-    return Err(InvalidCard(record_index, "END must not have a value indicator"))
+  if keyword == "END" {
+    if has_value {
+      return Err(
+        InvalidCard(record_index, "END must not have a value indicator"),
+      )
+    }
+    let trailing = match
+      ascii_slice(data, offset + 8, offset + fits_card_size) {
+      Err(error) => return Err(error)
+      Ok(value) => fits_trim(value)
+    }
+    if trailing != "" {
+      return Err(InvalidCard(record_index, "END must not have a comment"))
+    }
   }
   if has_value {
     let field = match ascii_slice(data, offset + 10, offset + fits_card_size) {

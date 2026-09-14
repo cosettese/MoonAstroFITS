@@ -46,3 +46,11 @@ their network-order IEEE bit patterns. Binary32 values are widened exactly to
 `Double`; binary64 values keep their original representation. Raw NaN,
 infinities, and signed zero survive decoding, and `BSCALE`/`BZERO` remain an
 explicit physical-value transformation.
+
+## Deterministic headers
+
+`encode_header` serializes the lexical `Card` model without inventing typed
+metadata. It uses conventional right alignment for short non-string values,
+keeps quoted strings adjacent to the value indicator, rejects lossy truncation
+and non-ASCII output, requires a terminal `END`, and pads only with spaces.
+Reparsing the result preserves card order, values, and comments.
