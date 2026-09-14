@@ -28,6 +28,8 @@ so the same parser can run on MoonBit's portable targets.
 - lexical `parse → encode → parse` header round trips.
 - range-checked big-endian integer pixel encoding;
 - byte-exact integer `encode → decode` round trips.
+- IEEE binary32/binary64 pixel encoding with big-endian output;
+- binary32 finite-overflow rejection and floating `encode → decode` tests.
 
 Run the checks and the in-memory example:
 
@@ -37,8 +39,8 @@ moon test --deny-warn
 moon run cmd/main
 ```
 
-The next milestones will add floating-point pixel encoding, complete image-HDU
-assembly, and scientific table support.
+The next milestones will add complete image-HDU assembly and scientific table
+support.
 
 ## Scope and origin
 

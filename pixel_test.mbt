@@ -236,3 +236,68 @@ test "integer pixel encoding rejects invalid shape and range" {
     is Err(@moonastrofits.UnsupportedIntegerBitpix(_)),
   )
 }
+
+///|
+fn floating_image(
+  axes : Array[Int],
+  raw : Array[Double],
+) -> @moonastrofits.FloatingImage {
+  { axes, raw, bscale: 1.0, bzero: 0.0, }
+}
+
+///|
+test "encode floating FITS pixels byte for byte" {
+  assert_eq(
+    @moonastrofits.encode_floating_pixels(
+      floating_image([3], [1.5, -2.25, -0.0]),
+      -32,
+    ),
+    Ok(b"\x3F\xC0\x00\x00\xC0\x10\x00\x00\x80\x00\x00\x00"),
+  )
+  let nan = 0x7FF8000000000001UL.reinterpret_as_double()
+  let infinity = 0x7FF0000000000000UL.reinterpret_as_double()
+  assert_eq(
+    @moonastrofits.encode_floating_pixels(
+      floating_image([3], [nan, infinity, -0.0]),
+      -64,
+    ),
+    Ok(
+      b"\x7F\xF8\x00\x00\x00\x00\x00\x01\x7F\xF0\x00\x00\x00\x00\x00\x00\x80\x00\x00\x00\x00\x00\x00\x00",
+    ),
+  )
+}
+
+///|
+test "floating pixel encoding round trips through FITS decoding" {
+  let original = floating_image([2], [1.5, -2.25])
+  let encoded = @moonastrofits.encode_floating_pixels(original, -32).unwrap()
+  let data = image_file(
+    [
+      "SIMPLE  =                    T", "BITPIX  =                  -32", "NAXIS   =                    1",
+      "NAXIS1  =                    2", "END",
+    ],
+    encoded.to_array(),
+  )
+  let hdu = @moonastrofits.parse_fits(data).unwrap().primary().unwrap()
+  assert_eq(@moonastrofits.decode_floating_image(data, hdu).unwrap(), original)
+}
+
+///|
+test "floating pixel encoding rejects invalid input" {
+  assert_true(
+    @moonastrofits.encode_floating_pixels(floating_image([2], [1.0]), -32)
+    is Err(@moonastrofits.InvalidSampleCount(_, _)),
+  )
+  assert_true(
+    @moonastrofits.encode_floating_pixels(floating_image([-1], []), -64)
+    is Err(@moonastrofits.InvalidAxis(_, _)),
+  )
+  assert_true(
+    @moonastrofits.encode_floating_pixels(floating_image([1], [1.0]), 32)
+    is Err(@moonastrofits.UnsupportedFloatingBitpix(_)),
+  )
+  assert_true(
+    @moonastrofits.encode_floating_pixels(floating_image([1], [3.5e38]), -32)
+    is Err(@moonastrofits.FloatingPixelOverflow(_, _)),
+  )
+}

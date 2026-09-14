@@ -396,3 +396,61 @@ pub fn encode_integer_pixels(
   }
   Ok(Bytes::from_array(output))
 }
+
+///|
+fn append_uint32_be(output : Array[Byte], bits : UInt) -> Unit {
+  output.push((bits >> 24).to_byte())
+  output.push((bits >> 16).to_byte())
+  output.push((bits >> 8).to_byte())
+  output.push(bits.to_byte())
+}
+
+///|
+fn append_uint64_be(output : Array[Byte], bits : UInt64) -> Unit {
+  for index = 0; index < 8; index = index + 1 {
+    let shift = (7 - index) * 8
+    output.push((bits >> shift).to_byte())
+  }
+}
+
+///|
+/// Encode floating-point image samples in FITS big-endian byte order.
+///
+/// `BITPIX=-32` performs the standard nearest binary32 conversion and rejects
+/// finite values that would become infinity. `BITPIX=-64` preserves every
+/// binary64 bit. NaN, infinities, and signed zero remain valid FITS samples.
+pub fn encode_floating_pixels(
+  image : FloatingImage,
+  bitpix : Int,
+) -> Result[Bytes, FitsError] {
+  let bytes_per_pixel = match bitpix {
+    -32 => 4
+    -64 => 8
+    value => return Err(UnsupportedFloatingBitpix(value))
+  }
+  let expected = match image_sample_count(image.axes) {
+    Err(error) => return Err(error)
+    Ok(value) => value
+  }
+  if expected != image.raw.length() {
+    return Err(InvalidSampleCount(expected, image.raw.length()))
+  }
+  let byte_length = match
+    checked_product(expected, bytes_per_pixel, "encoded floating image") {
+    Err(error) => return Err(error)
+    Ok(value) => value
+  }
+  let output = Array(capacity=byte_length)
+  for index, value in image.raw {
+    if bitpix == -32 {
+      let narrowed = Float::from_double(value)
+      if !value.is_nan() && !value.is_inf() && narrowed.is_inf() {
+        return Err(FloatingPixelOverflow(index, bitpix))
+      }
+      append_uint32_be(output, narrowed.reinterpret_as_uint())
+    } else {
+      append_uint64_be(output, value.reinterpret_as_uint64())
+    }
+  }
+  Ok(Bytes::from_array(output))
+}

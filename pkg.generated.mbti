@@ -10,6 +10,8 @@ pub fn decode_floating_image(Bytes, Hdu) -> Result[FloatingImage, FitsError]
 
 pub fn decode_integer_image(Bytes, Hdu) -> Result[IntegerImage, FitsError]
 
+pub fn encode_floating_pixels(FloatingImage, Int) -> Result[Bytes, FitsError]
+
 pub fn encode_header(Header) -> Result[Bytes, FitsError]
 
 pub fn encode_integer_pixels(IntegerImage, Int) -> Result[Bytes, FitsError]
@@ -55,6 +57,7 @@ pub(all) enum FitsError {
   InvalidSampleCount(Int, Int)
   PixelOutOfRange(Int, Int64, Int)
   BlankOutOfRange(Int64, Int)
+  FloatingPixelOverflow(Int, Int)
 } derive(Eq, @debug.Debug)
 pub fn FitsError::message(Self) -> String
 

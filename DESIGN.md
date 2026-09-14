@@ -62,3 +62,11 @@ validates the axis product, sample count, `BLANK` sentinel, and every raw value
 before emitting big-endian bytes. The encoder rejects overflow instead of
 clipping and deliberately leaves `BSCALE`/`BZERO` unchanged because they are
 header semantics, not stored-pixel transformations.
+
+## Floating-point encoding
+
+`encode_floating_pixels` emits network-order IEEE binary32 or binary64. The
+binary32 path uses nearest representable conversion but rejects finite values
+that would silently become infinity. The binary64 path is bit preserving,
+including NaN payloads and signed zero; both paths validate shape before
+allocating output.

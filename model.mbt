@@ -116,6 +116,7 @@ pub(all) enum FitsError {
   InvalidSampleCount(Int, Int)
   PixelOutOfRange(Int, Int64, Int)
   BlankOutOfRange(Int64, Int)
+  FloatingPixelOverflow(Int, Int)
 } derive(Eq, Debug)
 
 ///|
@@ -165,5 +166,7 @@ pub fn FitsError::message(self : FitsError) -> String {
       "pixel \{index} value \{value} is outside the BITPIX=\{bitpix} range"
     BlankOutOfRange(value, bitpix) =>
       "BLANK value \{value} is outside the BITPIX=\{bitpix} range"
+    FloatingPixelOverflow(index, bitpix) =>
+      "pixel \{index} is finite but overflows BITPIX=\{bitpix}"
   }
 }
