@@ -22,6 +22,8 @@ so the same parser can run on MoonBit's portable targets.
 - overflow and truncated-payload rejection before data access.
 - big-endian 8/16/32/64-bit integer image decoding;
 - explicit `BSCALE`, `BZERO`, and `BLANK` physical-value semantics.
+- big-endian IEEE binary32/binary64 image decoding;
+- preservation of floating-point NaN, infinities, and signed zero.
 
 Run the checks and the in-memory example:
 
@@ -31,8 +33,8 @@ moon test --deny-warn
 moon run cmd/main
 ```
 
-The next milestones will add IEEE floating-point pixels, deterministic writing,
-and scientific table support.
+The next milestones will add deterministic writing and scientific table
+support.
 
 ## Scope and origin
 

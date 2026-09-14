@@ -38,3 +38,11 @@ their stored representation. `BITPIX=8` remains unsigned, while 16/32/64-bit
 samples are decoded as signed two's-complement values. `IntegerImage` keeps the
 raw values alongside `BSCALE`, `BZERO`, and `BLANK`; callers can request
 physical values while blank samples remain distinguishable as `None`.
+
+## Floating-point pixels
+
+`decode_floating_image` handles `BITPIX=-32` and `BITPIX=-64` directly from
+their network-order IEEE bit patterns. Binary32 values are widened exactly to
+`Double`; binary64 values keep their original representation. Raw NaN,
+infinities, and signed zero survive decoding, and `BSCALE`/`BZERO` remain an
+explicit physical-value transformation.

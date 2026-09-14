@@ -106,3 +106,56 @@ test "reject floating-point BITPIX and invalid scaling" {
     is Err(@moonastrofits.InvalidReal(_, _)),
   )
 }
+
+///|
+test "decode big-endian binary32 pixels and apply scaling" {
+  let data = image_file(
+    [
+      "SIMPLE  =                    T", "BITPIX  =                  -32", "NAXIS   =                    1",
+      "NAXIS1  =                    2", "BSCALE  =                    2", "BZERO   =                    1",
+      "END",
+    ],
+    [b'\x3F', b'\xC0', b'\x00', b'\x00', b'\xC0', b'\x10', b'\x00', b'\x00'],
+  )
+  let hdu = @moonastrofits.parse_fits(data).unwrap().primary().unwrap()
+  let image = @moonastrofits.decode_floating_image(data, hdu).unwrap()
+  assert_eq(image.axes, [2])
+  assert_eq(image.raw, [1.5, -2.25])
+  assert_eq(image.physical_values(), [4.0, -3.5])
+}
+
+///|
+test "preserve binary64 NaN, infinity, and negative zero" {
+  let data = image_file(
+    [
+      "SIMPLE  =                    T", "BITPIX  =                  -64", "NAXIS   =                    1",
+      "NAXIS1  =                    3", "END",
+    ],
+    [
+      b'\x7F', b'\xF8', b'\x00', b'\x00', b'\x00', b'\x00', b'\x00', b'\x01', b'\x7F',
+      b'\xF0', b'\x00', b'\x00', b'\x00', b'\x00', b'\x00', b'\x00', b'\x80', b'\x00',
+      b'\x00', b'\x00', b'\x00', b'\x00', b'\x00', b'\x00',
+    ],
+  )
+  let hdu = @moonastrofits.parse_fits(data).unwrap().primary().unwrap()
+  let image = @moonastrofits.decode_floating_image(data, hdu).unwrap()
+  assert_true(image.raw[0].is_nan())
+  assert_true(image.raw[1].is_pos_inf())
+  assert_eq(image.raw[2].reinterpret_as_uint64(), 0x8000000000000000UL)
+}
+
+///|
+test "floating decoder rejects integer BITPIX" {
+  let data = image_file(
+    [
+      "SIMPLE  =                    T", "BITPIX  =                   16", "NAXIS   =                    1",
+      "NAXIS1  =                    1", "END",
+    ],
+    [b'\x00', b'\x01'],
+  )
+  let hdu = @moonastrofits.parse_fits(data).unwrap().primary().unwrap()
+  assert_true(
+    @moonastrofits.decode_floating_image(data, hdu)
+    is Err(@moonastrofits.UnsupportedFloatingBitpix(_)),
+  )
+}

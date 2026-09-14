@@ -240,3 +240,77 @@ pub fn decode_integer_image(
   }
   Ok({ axes: layout.axes, raw, bscale, bzero, blank, })
 }
+
+///|
+fn read_float32_be(data : Bytes, offset : Int) -> Double {
+  let bits = (data[offset].to_uint() << 24) |
+    (data[offset + 1].to_uint() << 16) |
+    (data[offset + 2].to_uint() << 8) |
+    data[offset + 3].to_uint()
+  Float::reinterpret_from_uint(bits).to_double()
+}
+
+///|
+fn read_float64_be(data : Bytes, offset : Int) -> Double {
+  let mut bits = 0UL
+  for index = 0; index < 8; index = index + 1 {
+    bits = (bits << 8) | data[offset + index].to_uint64()
+  }
+  bits.reinterpret_as_double()
+}
+
+///|
+/// Decode a contiguous IEEE floating-point primary array or IMAGE extension.
+///
+/// `BITPIX=-32` values are widened exactly from IEEE binary32 to `Double`;
+/// `BITPIX=-64` values retain their binary64 representation. NaN, infinities,
+/// and signed zero are preserved in `raw` before FITS linear scaling.
+pub fn decode_floating_image(
+  data : Bytes,
+  hdu : Hdu,
+) -> Result[FloatingImage, FitsError] {
+  let layout = match hdu.image {
+    None => return Err(NotImageHdu(hdu.index))
+    Some(value) => value
+  }
+  let bytes_per_pixel = match layout.bitpix {
+    -32 => 4
+    -64 => 8
+    value => return Err(UnsupportedFloatingBitpix(value))
+  }
+  let expected_length = match
+    checked_product(layout.pixel_count, bytes_per_pixel, "floating image") {
+    Err(error) => return Err(error)
+    Ok(value) => value
+  }
+  if expected_length != hdu.data_length {
+    return Err(UnsupportedImageLayout(hdu.index))
+  }
+  if hdu.data_offset < 0 || hdu.data_offset > data.length() {
+    return Err(Truncated(hdu.data_offset, expected_length, 0))
+  }
+  let available = data.length() - hdu.data_offset
+  if expected_length > available {
+    return Err(Truncated(hdu.data_offset, expected_length, available))
+  }
+  let bscale = match scaling_value(hdu.header, "BSCALE", 1.0) {
+    Err(error) => return Err(error)
+    Ok(value) => value
+  }
+  let bzero = match scaling_value(hdu.header, "BZERO", 0.0) {
+    Err(error) => return Err(error)
+    Ok(value) => value
+  }
+  let raw = []
+  for index = 0; index < layout.pixel_count; index = index + 1 {
+    let offset = hdu.data_offset + index * bytes_per_pixel
+    raw.push(
+      match layout.bitpix {
+        -32 => read_float32_be(data, offset)
+        -64 => read_float64_be(data, offset)
+        _ => abort("validated floating BITPIX became unreachable")
+      },
+    )
+  }
+  Ok({ axes: layout.axes, raw, bscale, bzero, })
+}

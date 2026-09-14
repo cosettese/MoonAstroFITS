@@ -75,6 +75,21 @@ pub fn IntegerImage::physical_values(self : IntegerImage) -> Array[Double?] {
 }
 
 ///|
+/// Decoded IEEE floating-point image samples and FITS linear scaling.
+pub(all) struct FloatingImage {
+  axes : Array[Int]
+  raw : Array[Double]
+  bscale : Double
+  bzero : Double
+} derive(Eq, Debug)
+
+///|
+/// Apply FITS linear scaling while preserving IEEE special values.
+pub fn FloatingImage::physical_values(self : FloatingImage) -> Array[Double] {
+  self.raw.map(fn(value) { value * self.bscale + self.bzero })
+}
+
+///|
 /// Source-aware failures from FITS structural parsing.
 pub(all) enum FitsError {
   Truncated(Int, Int, Int)
@@ -94,6 +109,7 @@ pub(all) enum FitsError {
   SizeOverflow(String)
   NotImageHdu(Int)
   UnsupportedIntegerBitpix(Int)
+  UnsupportedFloatingBitpix(Int)
   UnsupportedImageLayout(Int)
   InvalidReal(String, String)
 } derive(Eq, Debug)
@@ -131,6 +147,8 @@ pub fn FitsError::message(self : FitsError) -> String {
     NotImageHdu(index) => "FITS HDU \{index} is not an image"
     UnsupportedIntegerBitpix(value) =>
       "FITS BITPIX \{value} is not an integer pixel representation"
+    UnsupportedFloatingBitpix(value) =>
+      "FITS BITPIX \{value} is not an IEEE floating-point representation"
     UnsupportedImageLayout(index) =>
       "FITS HDU \{index} uses random groups or parameters and cannot be decoded as a contiguous image"
     InvalidReal(keyword, value) =>
