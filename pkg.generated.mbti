@@ -10,6 +10,8 @@ pub fn decode_floating_image(Bytes, Hdu) -> Result[FloatingImage, FitsError]
 
 pub fn decode_integer_image(Bytes, Hdu) -> Result[IntegerImage, FitsError]
 
+pub fn encode_extension_hdu(Header, Bytes) -> Result[Bytes, FitsError]
+
 pub fn encode_floating_pixels(FloatingImage, Int) -> Result[Bytes, FitsError]
 
 pub fn encode_header(Header) -> Result[Bytes, FitsError]

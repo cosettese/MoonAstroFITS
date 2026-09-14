@@ -32,6 +32,8 @@ so the same parser can run on MoonBit's portable targets.
 - binary32 finite-overflow rejection and floating `encode → decode` tests.
 - complete primary-HDU assembly with exact payload-length validation;
 - standards-aligned space header padding and zero data padding.
+- IMAGE and generic extension-HDU assembly;
+- required extension keyword ordering and parameter-byte sizing.
 
 Run the checks and the in-memory example:
 
@@ -41,8 +43,7 @@ moon test --deny-warn
 moon run cmd/main
 ```
 
-The next milestones will add extension-HDU assembly and scientific table
-support.
+The next milestones will add scientific binary-table schemas and row decoding.
 
 ## Scope and origin
 

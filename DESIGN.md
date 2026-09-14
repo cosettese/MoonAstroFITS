@@ -78,3 +78,10 @@ unit. Header analysis is shared with the reader, so structural keyword order,
 geometry, random-group parameters, and overflow rules cannot drift between
 read and write paths. The API requires the exact unpadded payload length, then
 adds zero bytes to the next 2880-byte boundary.
+
+## Extension HDU assembly
+
+`encode_extension_hdu` uses the same byte assembly path as primary HDUs but
+analyzes the header in extension mode. This requires an `XTENSION` card plus
+ordered `PCOUNT` and `GCOUNT`, supports both IMAGE and generic extensions, and
+uses the general grouped-data formula when validating the supplied payload.

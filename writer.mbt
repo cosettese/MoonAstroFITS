@@ -137,17 +137,13 @@ fn append_bytes(output : Array[Byte], bytes : Bytes) -> Unit {
 }
 
 ///|
-/// Assemble one complete primary HDU from a header and encoded data unit.
-///
-/// Structural cards and the exact unpadded data length are validated with the
-/// same rules used by `parse_fits`. Header padding is ASCII space; data padding
-/// is zero. The supplied header's stored `data_offset` is ignored because the
-/// canonical encoded header determines the output offset.
-pub fn encode_primary_hdu(
+fn encode_hdu(
   header : Header,
   data : Bytes,
+  hdu_index : Int,
+  context : String,
 ) -> Result[Bytes, FitsError] {
-  let layout = match analyze_hdu_header(header, 0) {
+  let layout = match analyze_hdu_header(header, hdu_index) {
     Err(error) => return Err(error)
     Ok(value) => value
   }
@@ -163,11 +159,7 @@ pub fn encode_primary_hdu(
     Ok(value) => value
   }
   let output_length = match
-    checked_sum(
-      header_bytes.length(),
-      padded_data_length,
-      "encoded primary HDU",
-    ) {
+    checked_sum(header_bytes.length(), padded_data_length, context) {
     Err(error) => return Err(error)
     Ok(value) => value
   }
@@ -178,4 +170,31 @@ pub fn encode_primary_hdu(
     output.push(b'\x00')
   }
   Ok(Bytes::from_array(output))
+}
+
+///|
+/// Assemble one complete primary HDU from a header and encoded data unit.
+///
+/// Structural cards and the exact unpadded data length are validated with the
+/// same rules used by `parse_fits`. Header padding is ASCII space; data padding
+/// is zero. The supplied header's stored `data_offset` is ignored because the
+/// canonical encoded header determines the output offset.
+pub fn encode_primary_hdu(
+  header : Header,
+  data : Bytes,
+) -> Result[Bytes, FitsError] {
+  encode_hdu(header, data, 0, "encoded primary HDU")
+}
+
+///|
+/// Assemble one complete extension HDU from a header and encoded data unit.
+///
+/// The header must begin with `XTENSION` and contain ordered `BITPIX`, `NAXIS`,
+/// each `NAXISn`, `PCOUNT`, and `GCOUNT` cards. Both IMAGE and non-image
+/// extensions use the general FITS data-length formula before zero padding.
+pub fn encode_extension_hdu(
+  header : Header,
+  data : Bytes,
+) -> Result[Bytes, FitsError] {
+  encode_hdu(header, data, 1, "encoded extension HDU")
 }
