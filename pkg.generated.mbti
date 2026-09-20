@@ -43,6 +43,9 @@ pub(all) struct BinaryTable {
   row_count : Int
   data_offset : Int
 } derive(Eq, @debug.Debug)
+pub fn BinaryTable::equal(Self, Self) -> Bool
+pub fn BinaryTable::not_equal(Self, Self) -> Bool
+pub fn BinaryTable::to_repr(Self) -> @debug.Repr
 
 pub(all) struct Card {
   keyword : String
@@ -50,6 +53,9 @@ pub(all) struct Card {
   comment : String?
   record_index : Int
 } derive(Eq, @debug.Debug)
+pub fn Card::equal(Self, Self) -> Bool
+pub fn Card::not_equal(Self, Self) -> Bool
+pub fn Card::to_repr(Self) -> @debug.Repr
 
 pub(all) enum FitsError {
   Truncated(Int, Int, Int)
@@ -86,12 +92,18 @@ pub(all) enum FitsError {
   InvalidTableCellCount(Int, Int)
   InvalidTableCell(Int, String)
 } derive(Eq, @debug.Debug)
+pub fn FitsError::equal(Self, Self) -> Bool
 pub fn FitsError::message(Self) -> String
+pub fn FitsError::not_equal(Self, Self) -> Bool
+pub fn FitsError::to_repr(Self) -> @debug.Repr
 
 pub(all) struct FitsFile {
   hdus : Array[Hdu]
 } derive(Eq, @debug.Debug)
+pub fn FitsFile::equal(Self, Self) -> Bool
+pub fn FitsFile::not_equal(Self, Self) -> Bool
 pub fn FitsFile::primary(Self) -> Hdu?
+pub fn FitsFile::to_repr(Self) -> @debug.Repr
 
 pub(all) struct FloatingImage {
   axes : Array[Int]
@@ -99,7 +111,10 @@ pub(all) struct FloatingImage {
   bscale : Double
   bzero : Double
 } derive(Eq, @debug.Debug)
+pub fn FloatingImage::equal(Self, Self) -> Bool
+pub fn FloatingImage::not_equal(Self, Self) -> Bool
 pub fn FloatingImage::physical_values(Self) -> Array[Double]
+pub fn FloatingImage::to_repr(Self) -> @debug.Repr
 
 pub(all) struct Hdu {
   index : Int
@@ -110,19 +125,28 @@ pub(all) struct Hdu {
   data_length : Int
   next_hdu_offset : Int
 } derive(Eq, @debug.Debug)
+pub fn Hdu::equal(Self, Self) -> Bool
+pub fn Hdu::not_equal(Self, Self) -> Bool
+pub fn Hdu::to_repr(Self) -> @debug.Repr
 
 pub(all) enum HduKind {
   Primary
   ImageExtension
   OtherExtension(String)
 } derive(Eq, @debug.Debug)
+pub fn HduKind::equal(Self, Self) -> Bool
+pub fn HduKind::not_equal(Self, Self) -> Bool
+pub fn HduKind::to_repr(Self) -> @debug.Repr
 
 pub(all) struct Header {
   cards : Array[Card]
   data_offset : Int
 } derive(Eq, @debug.Debug)
+pub fn Header::equal(Self, Self) -> Bool
 pub fn Header::get(Self, String) -> Card?
 pub fn Header::get_all(Self, String) -> Array[Card]
+pub fn Header::not_equal(Self, Self) -> Bool
+pub fn Header::to_repr(Self) -> @debug.Repr
 
 pub(all) struct ImageLayout {
   bitpix : Int
@@ -130,6 +154,9 @@ pub(all) struct ImageLayout {
   pixel_count : Int
   byte_length : Int
 } derive(Eq, @debug.Debug)
+pub fn ImageLayout::equal(Self, Self) -> Bool
+pub fn ImageLayout::not_equal(Self, Self) -> Bool
+pub fn ImageLayout::to_repr(Self) -> @debug.Repr
 
 pub(all) struct IntegerImage {
   axes : Array[Int]
@@ -138,7 +165,10 @@ pub(all) struct IntegerImage {
   bzero : Double
   blank : Int64?
 } derive(Eq, @debug.Debug)
+pub fn IntegerImage::equal(Self, Self) -> Bool
+pub fn IntegerImage::not_equal(Self, Self) -> Bool
 pub fn IntegerImage::physical_values(Self) -> Array[Double?]
+pub fn IntegerImage::to_repr(Self) -> @debug.Repr
 
 pub(all) struct TableColumn {
   index : Int
@@ -149,10 +179,14 @@ pub(all) struct TableColumn {
   width : Int
   kind : TableColumnKind
 } derive(Eq, @debug.Debug)
+pub fn TableColumn::equal(Self, Self) -> Bool
+pub fn TableColumn::not_equal(Self, Self) -> Bool
+pub fn TableColumn::to_repr(Self) -> @debug.Repr
 
 pub(all) enum TableColumnKind {
   Ascii
   Logical
+  Bit
   UnsignedByte
   Int16
   Int32
@@ -160,13 +194,20 @@ pub(all) enum TableColumnKind {
   Float32
   Float64
 } derive(Eq, @debug.Debug)
+pub fn TableColumnKind::equal(Self, Self) -> Bool
+pub fn TableColumnKind::not_equal(Self, Self) -> Bool
+pub fn TableColumnKind::to_repr(Self) -> @debug.Repr
 
 pub(all) enum TableValue {
   Text(String)
   Logicals(Array[Bool?])
+  Bits(Array[Bool])
   Integers(Array[Int64])
   Reals(Array[Double])
 } derive(Eq, @debug.Debug)
+pub fn TableValue::equal(Self, Self) -> Bool
+pub fn TableValue::not_equal(Self, Self) -> Bool
+pub fn TableValue::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

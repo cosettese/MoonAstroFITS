@@ -10,12 +10,22 @@ fn required_table_integer(
 }
 
 ///|
-fn table_kind_unit_width(kind : TableColumnKind) -> Int {
+fn table_column_width(
+  kind : TableColumnKind,
+  repeat : Int,
+) -> Result[Int, FitsError] {
   match kind {
-    Ascii | Logical | UnsignedByte => 1
-    Int16 => 2
-    Int32 | Float32 => 4
-    Int64 | Float64 => 8
+    Bit => Ok(repeat / 8 + (if repeat % 8 == 0 { 0 } else { 1 }))
+    _ => {
+      let unit_width = match kind {
+        Ascii | Logical | UnsignedByte => 1
+        Int16 => 2
+        Int32 | Float32 => 4
+        Int64 | Float64 => 8
+        Bit => abort("bit width handled above")
+      }
+      checked_product(repeat, unit_width, "binary-table column width")
+    }
   }
 }
 
@@ -37,12 +47,7 @@ fn validate_table_columns(table : BinaryTable) -> Result[Unit, FitsError] {
         ),
       )
     }
-    let width = match
-      checked_product(
-        column.repeat,
-        table_kind_unit_width(column.kind),
-        "binary-table column width",
-      ) {
+    let width = match table_column_width(column.kind, column.repeat) {
       Err(error) => return Err(error)
       Ok(value) => value
     }
@@ -106,6 +111,7 @@ fn parse_table_column(
   let kind = match code {
     'A' => Ascii
     'L' => Logical
+    'X' => Bit
     'B' => UnsignedByte
     'I' => Int16
     'J' => Int32
@@ -114,12 +120,7 @@ fn parse_table_column(
     'D' => Float64
     _ => return Err(UnsupportedTableFormat(format_keyword, format))
   }
-  let width = match
-    checked_product(
-      repeat,
-      table_kind_unit_width(kind),
-      "binary-table column width",
-    ) {
+  let width = match table_column_width(kind, repeat) {
     Err(error) => return Err(error)
     Ok(value) => value
   }
@@ -139,8 +140,8 @@ fn parse_table_column(
 /// Parse the fixed-width schema of a `BINTABLE` extension.
 ///
 /// The initial slice supports scalar, repeated, and empty `A`, `L`, `B`, `I`,
-/// `J`, `K`, `E`, and `D` fields. Bit arrays, complex values, and heap
-/// descriptors are rejected explicitly rather than decoded ambiguously.
+/// `J`, `K`, `E`, `D`, and `X` fields. Complex values and heap descriptors are
+/// rejected explicitly rather than decoded ambiguously.
 pub fn parse_binary_table(hdu : Hdu) -> Result[BinaryTable, FitsError] {
   match hdu.kind {
     OtherExtension("BINTABLE") => ()
@@ -281,6 +282,15 @@ pub fn decode_binary_row(
         }
         cells.push(Logicals(values))
       }
+      Bit => {
+        let values = []
+        for index = 0; index < column.repeat; index = index + 1 {
+          let byte = data[start + index / 8]
+          let mask = 1 << (7 - index % 8)
+          values.push((byte.to_int() & mask) != 0)
+        }
+        cells.push(Bits(values))
+      }
       UnsignedByte => {
         let values = []
         for index = 0; index < column.repeat; index = index + 1 {
@@ -333,6 +343,7 @@ fn invalid_cell_type(column : TableColumn) -> FitsError {
   let expected = match column.kind {
     Ascii => "text"
     Logical => "logical array"
+    Bit => "bit array"
     UnsignedByte | Int16 | Int32 | Int64 => "integer array"
     Float32 | Float64 => "real array"
   }
@@ -414,7 +425,10 @@ fn encode_integer_cell(
     Int64 => 64
     _ => return Err(invalid_cell_type(column))
   }
-  let width = table_kind_unit_width(column.kind)
+  let width = match table_column_width(column.kind, 1) {
+    Ok(value) => value
+    Err(error) => return Err(error)
+  }
   for value in values {
     if !integer_value_fits(value, bitpix) {
       return Err(
@@ -425,6 +439,33 @@ fn encode_integer_cell(
       )
     }
     append_integer_be(output, value, width)
+  }
+  Ok(())
+}
+
+///|
+fn encode_bit_cell(
+  output : Array[Byte],
+  column : TableColumn,
+  values : Array[Bool],
+) -> Result[Unit, FitsError] {
+  if values.length() != column.repeat {
+    return Err(
+      InvalidTableCell(
+        column.index,
+        "requires \{column.repeat} bits, got \{values.length()}",
+      ),
+    )
+  }
+  for byte_index = 0; byte_index < column.width; byte_index = byte_index + 1 {
+    let mut byte = 0
+    for bit_index = 0; bit_index < 8; bit_index = bit_index + 1 {
+      let value_index = byte_index * 8 + bit_index
+      if value_index < values.length() && values[value_index] {
+        byte = byte | (1 << (7 - bit_index))
+      }
+    }
+    output.push(byte.to_byte())
   }
   Ok(())
 }
@@ -491,6 +532,11 @@ pub fn encode_binary_row(
       Logical =>
         match cells[index] {
           Logicals(values) => encode_logical_cell(output, column, values)
+          _ => Err(invalid_cell_type(column))
+        }
+      Bit =>
+        match cells[index] {
+          Bits(values) => encode_bit_cell(output, column, values)
           _ => Err(invalid_cell_type(column))
         }
       UnsignedByte | Int16 | Int32 | Int64 =>

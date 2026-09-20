@@ -94,6 +94,7 @@ pub fn FloatingImage::physical_values(self : FloatingImage) -> Array[Double] {
 pub(all) enum TableColumnKind {
   Ascii
   Logical
+  Bit
   UnsignedByte
   Int16
   Int32
@@ -128,6 +129,7 @@ pub(all) struct BinaryTable {
 pub(all) enum TableValue {
   Text(String)
   Logicals(Array[Bool?])
+  Bits(Array[Bool])
   Integers(Array[Int64])
   Reals(Array[Double])
 } derive(Eq, Debug)
@@ -236,3 +238,82 @@ pub fn FitsError::message(self : FitsError) -> String {
       "invalid FITS binary-table column \{column}: \{reason}"
   }
 }
+
+///|
+/// Explicitly preserve derived methods under the current MoonBit toolchain.
+pub extend Card with Eq::{not_equal, equal}
+
+///|
+pub extend Card with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend Header with Eq::{not_equal, equal}
+
+///|
+pub extend Header with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend HduKind with Eq::{not_equal, equal}
+
+///|
+pub extend HduKind with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ImageLayout with Eq::{not_equal, equal}
+
+///|
+pub extend ImageLayout with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend Hdu with Eq::{not_equal, equal}
+
+///|
+pub extend Hdu with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend FitsFile with Eq::{not_equal, equal}
+
+///|
+pub extend FitsFile with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend IntegerImage with Eq::{not_equal, equal}
+
+///|
+pub extend IntegerImage with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend FloatingImage with Eq::{not_equal, equal}
+
+///|
+pub extend FloatingImage with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend TableColumnKind with Eq::{not_equal, equal}
+
+///|
+pub extend TableColumnKind with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend TableColumn with Eq::{not_equal, equal}
+
+///|
+pub extend TableColumn with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend BinaryTable with Eq::{not_equal, equal}
+
+///|
+pub extend BinaryTable with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend TableValue with Eq::{not_equal, equal}
+
+///|
+pub extend TableValue with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend FitsError with Eq::{not_equal, equal}
+
+///|
+pub extend FitsError with @moonbitlang/core/debug.Debug::{to_repr}

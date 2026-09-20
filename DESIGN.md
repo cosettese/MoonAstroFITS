@@ -91,16 +91,17 @@ uses the general grouped-data formula when validating the supplied payload.
 `parse_binary_table` turns the `TFIELDS`, `TTYPEn`, and `TFORMn` metadata of a
 `BINTABLE` extension into checked row geometry. The first supported storage
 formats are ASCII text, tri-state logical values, unsigned bytes, signed
-16/32/64-bit integers, and IEEE binary32/binary64 values, including fixed and
-zero repeat counts. Logical bytes map `T` and `F` to defined booleans and zero
-to `None`; other values are rejected. Column widths must add up exactly to
-`NAXIS1`, and the declared row area must fit inside the HDU data unit before any
-cell is read.
+16/32/64-bit integers, IEEE binary32/binary64 values, and packed bit arrays,
+including fixed and zero repeat counts. Logical bytes map `T` and `F` to defined
+booleans and zero to `None`; other values are rejected. `X` bits are ordered
+most-significant bit first and occupy `ceil(repeat / 8)` bytes. Column widths
+must add up exactly to `NAXIS1`, and the declared row area must fit inside the
+HDU data unit before any cell is read.
 
 `decode_binary_row` returns one typed value per column, preserves repeated
 numeric fields as arrays, trims only FITS ASCII padding, and interprets numeric
-bytes in network order. Variable-length `P`/`Q` descriptors, heap data, bits,
-and complex values remain explicit unsupported formats until their
+bytes in network order. Variable-length `P`/`Q` descriptors, heap data, and
+complex values remain explicit unsupported formats until their
 representation can be modeled without lossy shortcuts.
 
 `encode_binary_row` is the byte-level inverse for the same fixed-width schema.

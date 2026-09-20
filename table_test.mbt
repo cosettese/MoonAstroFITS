@@ -353,3 +353,81 @@ test "preserve zero-repeat empty table fields" {
   assert_eq(@moonastrofits.decode_binary_row(data, table, 0).unwrap(), row)
   assert_eq(@moonastrofits.encode_binary_row(table, row).unwrap(), b"\x09")
 }
+
+///|
+test "decode and encode packed bit-array columns" {
+  let cards = [
+    "XTENSION= 'BINTABLE'", "BITPIX  =                    8", "NAXIS   =                    2",
+    "NAXIS1  =                    3", "NAXIS2  =                    1", "PCOUNT  =                    0",
+    "GCOUNT  =                    1", "TFIELDS =                    2", "TTYPE1  = 'MASK'",
+    "TFORM1  = '9X'", "TTYPE2  = 'QUALITY'", "TFORM2  = '1B'", "END",
+  ]
+  let data = binary_table_file(cards, b"\xB2\x80\x07")
+  let table = @moonastrofits.parse_binary_table(
+    @moonastrofits.parse_fits(data).unwrap().hdus[1],
+  ).unwrap()
+  assert_eq(table.columns[0].kind, @moonastrofits.Bit)
+  assert_eq(table.columns[0].repeat, 9)
+  assert_eq(table.columns[0].width, 2)
+  assert_eq(table.columns[1].offset, 2)
+  let row = [
+    @moonastrofits.Bits([
+      true, false, true, true, false, false, true, false, true,
+    ]),
+    @moonastrofits.Integers([7L]),
+  ]
+  assert_eq(@moonastrofits.decode_binary_row(data, table, 0).unwrap(), row)
+  assert_eq(
+    @moonastrofits.encode_binary_row(table, row).unwrap(),
+    b"\xB2\x80\x07",
+  )
+}
+
+///|
+test "bit-array encoding clears padding and checks repeat count" {
+  let data = binary_table_file(
+    [
+      "XTENSION= 'BINTABLE'", "BITPIX  =                    8", "NAXIS   =                    2",
+      "NAXIS1  =                    1", "NAXIS2  =                    1", "PCOUNT  =                    0",
+      "GCOUNT  =                    1", "TFIELDS =                    1", "TFORM1  = '3X'",
+      "END",
+    ],
+    b"\xFF",
+  )
+  let table = @moonastrofits.parse_binary_table(
+    @moonastrofits.parse_fits(data).unwrap().hdus[1],
+  ).unwrap()
+  assert_eq(@moonastrofits.decode_binary_row(data, table, 0).unwrap(), [
+    @moonastrofits.Bits([true, true, true]),
+  ])
+  assert_eq(
+    @moonastrofits.encode_binary_row(table, [
+      @moonastrofits.Bits([true, false, true]),
+    ]).unwrap(),
+    b"\xA0",
+  )
+  assert_true(
+    @moonastrofits.encode_binary_row(table, [@moonastrofits.Bits([true])])
+    is Err(@moonastrofits.InvalidTableCell(1, _)),
+  )
+}
+
+///|
+test "preserve zero-repeat empty bit columns" {
+  let data = binary_table_file(
+    [
+      "XTENSION= 'BINTABLE'", "BITPIX  =                    8", "NAXIS   =                    2",
+      "NAXIS1  =                    1", "NAXIS2  =                    1", "PCOUNT  =                    0",
+      "GCOUNT  =                    1", "TFIELDS =                    2", "TFORM1  = '0X'",
+      "TFORM2  = '1B'", "END",
+    ],
+    b"\x09",
+  )
+  let table = @moonastrofits.parse_binary_table(
+    @moonastrofits.parse_fits(data).unwrap().hdus[1],
+  ).unwrap()
+  assert_eq(table.columns[0].width, 0)
+  let row = [@moonastrofits.Bits([]), @moonastrofits.Integers([9L])]
+  assert_eq(@moonastrofits.decode_binary_row(data, table, 0).unwrap(), row)
+  assert_eq(@moonastrofits.encode_binary_row(table, row).unwrap(), b"\x09")
+}
