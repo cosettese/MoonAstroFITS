@@ -52,6 +52,22 @@ moon test --deny-warn
 moon run cmd/main
 ```
 
+Run the real-file preflight against the NASA/GSFC 64-bit FITS sample:
+
+```bash
+moon run cmd/preflight --target native -- conformance/fixtures/test64bit1.fit
+```
+
+On a Windows host without a C compiler, the equivalent Node.js/JS example is:
+
+```bash
+moon run cmd/preflight-js --target js -- conformance/fixtures/test64bit1.fit
+```
+
+The Astropy and FITSverify comparison, expected values, fixture provenance, and
+the intentional `Q`/heap boundary are recorded in
+[conformance/README.md](conformance/README.md).
+
 The next milestones will add variable-length array descriptors, heap decoding,
 and higher-level table construction helpers.
 
@@ -59,7 +75,9 @@ and higher-level table construction helpers.
 
 This is an original MoonBit implementation based on the public
 [FITS Standard 4.0](https://fits.gsfc.nasa.gov/fits_standard.html). It is not a
-port and currently includes no copied third-party source or data fixtures.
+port. The repository includes one unmodified NASA/GSFC sample only as an
+interoperability fixture; its source and hash are documented in
+[conformance/fixtures/README.md](conformance/fixtures/README.md).
 
 See [ECOSYSTEM.md](ECOSYSTEM.md) for the dated public overlap check and
 [DESIGN.md](DESIGN.md) for format invariants.
