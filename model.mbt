@@ -119,6 +119,13 @@ pub(all) struct TableColumn {
 } derive(Eq, Debug)
 
 ///|
+/// User-facing schema for constructing a binary-table extension.
+pub(all) struct TableField {
+  name : String?
+  format : String
+} derive(Eq, Debug)
+
+///|
 /// Row and heap geometry plus column schema for a BINTABLE extension.
 pub(all) struct BinaryTable {
   columns : Array[TableColumn]
@@ -307,6 +314,12 @@ pub extend TableColumn with Eq::{not_equal, equal}
 
 ///|
 pub extend TableColumn with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend TableField with Eq::{not_equal, equal}
+
+///|
+pub extend TableField with @moonbitlang/core/debug.Debug::{to_repr}
 
 ///|
 pub extend BinaryTable with Eq::{not_equal, equal}

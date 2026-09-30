@@ -1,0 +1,8 @@
+import {
+  "cosettese/moonastrofits" @fits,
+  "moonbitlang/core/env",
+}
+
+supported_targets = "+js"
+
+pkgtype(kind: "executable")

@@ -47,6 +47,8 @@ so the same parser can run on MoonBit's portable targets.
   including optional `THEAP` gaps and declared maximum lengths.
 - `P`/`Q` heap encoding with deterministic row-major packing, capacity checks,
   and byte-exact reproduction of the official 64-bit sample's table data units.
+- complete `BINTABLE` extension construction from field formats and typed rows,
+  deriving `NAXIS1`, `NAXIS2`, `PCOUNT`, descriptor offsets, and FITS padding.
 
 Run the checks and the in-memory example:
 
@@ -69,12 +71,20 @@ For a complete comparison against the 15 Astropy reference rows, run:
 moon run cmd/preflight-js --target js -- --check-sample conformance/fixtures/test64bit1.fit
 ```
 
+Generate a standalone two-HDU FITS example for independent validation:
+
+```bash
+moon run cmd/table-demo-js --target js -- table-demo.fits
+fitscheck --compliance --ignore-missing table-demo.fits
+fitsverify table-demo.fits
+```
+
 The Astropy and FITSverify comparison, expected values, and fixture provenance
 are recorded in
 [conformance/README.md](conformance/README.md).
 
-The next milestones will add higher-level table construction helpers and more
-independent real-file fixtures.
+The next milestones will add more independent real-file fixtures and broader
+FITS binary-table types.
 
 ## Scope and origin
 

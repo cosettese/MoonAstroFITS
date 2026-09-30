@@ -124,3 +124,11 @@ that exceed either `TFORMn` maxima or the `PCOUNT`-derived capacity. The
 official 64-bit fixture's fixed and `Q` table data units reproduce byte for
 byte after decode and re-encode. Header cards and 2880-byte HDU padding remain
 the responsibility of the extension-HDU assembly API.
+
+`encode_binary_table_extension` closes that assembly gap for new tables. It
+accepts `TableField` formats and typed rows, reuses the same format parser and
+cell encoder, derives row width/count and exact `PCOUNT`, then emits the
+canonical header, packed heap, and 2880-byte extension padding. A JS-hosted
+example writes the resulting two-HDU file; Astropy and FITSverify independently
+validate it in CI. The builder intentionally uses a contiguous heap without
+`THEAP` gaps; callers preserving an existing gap can use the lower-level API.

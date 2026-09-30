@@ -90,3 +90,15 @@ Verification found 0 warning(s) and 0 error(s).
 | 第 3 个 HDU 的 `1QK(15)` 变长表 | 通过 | 0 warning / 0 error | 15 行逐行与 Astropy 参考值一致 |
 
 `--check-sample` 固化了 Astropy 读到的原始 64 位图像值、15 行定宽表值和 15 行 heap 数组，再将两张表重新编码并与原始数据单元逐字节比较；CI 在 Linux、macOS、Windows 上运行该命令。完整 FITS 标准覆盖仍需要更多类型与更多真实文件。
+
+## 5. 从结构化数据生成文件的反向验收
+
+`cmd/table-demo-js` 调用公开的 `encode_binary_table_extension`，以 3 列、3 行（含 64 位极值和空变长数组）生成完整 BINTABLE，并与主 HDU 拼成文件。程序写盘前会自行解析并逐行回读；输出路径由调用方指定：
+
+```text
+moon run cmd/table-demo-js --target js -- table-demo.fits
+fitscheck --compliance --ignore-missing table-demo.fits
+fitsverify table-demo.fits
+```
+
+本地 Astropy 6.1.7 解析结果为 2 个 HDU，列名 `TARGET/INDEX/SAMPLES`，表几何 `NAXIS1=28`、`NAXIS2=3`、`PCOUNT=24`；3 行 `SAMPLES` 分别为 `[-9223372036854775808, 1]`、`[]`、`[9223372036854775807]`。Ubuntu 22.04 上 FITSverify 4.20 对这份新生成的文件报告 **0 warning、0 error**。CI 在 Ubuntu 上重复运行生成命令及 Astropy `fitscheck`、FITSverify 的格式检查。

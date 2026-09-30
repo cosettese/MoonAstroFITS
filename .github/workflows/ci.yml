@@ -33,6 +33,19 @@ jobs:
         run: |
           moon info
           git diff --exit-code
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install independent FITS validators
+        run: |
+          python -m pip install astropy
+          sudo apt-get update
+          sudo apt-get install -y fitsverify
+      - name: Validate a generated table with Astropy and FITSverify
+        run: |
+          moon run cmd/table-demo-js --target js -- "$RUNNER_TEMP/table-demo.fits"
+          fitscheck --compliance --ignore-missing "$RUNNER_TEMP/table-demo.fits"
+          fitsverify "$RUNNER_TEMP/table-demo.fits"
 
   portability:
     runs-on: ${{ matrix.os }}
