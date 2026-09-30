@@ -243,3 +243,149 @@ test "negative nonempty P heap offset is rejected" {
     is Err(@moonastrofits.InvalidHeapDescriptor(1, 0, _)),
   )
 }
+
+///|
+test "encode mixed P and Q cells into a row-major heap with THEAP gap" {
+  let cards = [
+    "XTENSION= 'BINTABLE'", "BITPIX  =                    8", "NAXIS   =                    2",
+    "NAXIS1  =                   25", "NAXIS2  =                    2", "PCOUNT  =                   38",
+    "GCOUNT  =                    1", "TFIELDS =                    3", "TFORM1  = '1B'",
+    "TFORM2  = '1PJ(2)'", "TFORM3  = '1QK(2)'", "THEAP   =                   52",
+    "END",
+  ]
+  let template = binary_table_file(cards, Bytes::make(88, b'\x00'))
+  let table = @moonastrofits.parse_binary_table(
+    @moonastrofits.parse_fits(template).unwrap().hdus[1],
+  ).unwrap()
+  let rows = [
+    [
+      @moonastrofits.Integers([7L]),
+      @moonastrofits.Integers([1L, -2L]),
+      @moonastrofits.Integers([-9223372036854775807L - 1L]),
+    ],
+    [
+      @moonastrofits.Integers([8L]),
+      @moonastrofits.Integers([3L]),
+      @moonastrofits.Integers([0L, 9223372036854775807L]),
+    ],
+  ]
+  let encoded = @moonastrofits.encode_binary_table_data(table, rows).unwrap()
+  assert_eq(encoded.length(), 88)
+  assert_eq(encoded[0], b'\x07')
+  assert_eq(encoded[25], b'\x08')
+  assert_eq(encoded[50], b'\x00')
+  assert_eq(encoded[51], b'\x00')
+  let file = binary_table_file(cards, encoded)
+  let decoded_table = @moonastrofits.parse_binary_table(
+    @moonastrofits.parse_fits(file).unwrap().hdus[1],
+  ).unwrap()
+  assert_eq(
+    @moonastrofits.decode_binary_row(file, decoded_table, 0).unwrap(),
+    rows[0],
+  )
+  assert_eq(
+    @moonastrofits.decode_binary_row(file, decoded_table, 1).unwrap(),
+    rows[1],
+  )
+}
+
+///|
+test "heap writer rejects declared maximum and capacity overruns" {
+  let cards = [
+    "XTENSION= 'BINTABLE'", "BITPIX  =                    8", "NAXIS   =                    2",
+    "NAXIS1  =                    8", "NAXIS2  =                    1", "PCOUNT  =                    4",
+    "GCOUNT  =                    1", "TFIELDS =                    1", "TFORM1  = '1PJ(1)'",
+    "END",
+  ]
+  let template = binary_table_file(cards, Bytes::make(12, b'\x00'))
+  let table = @moonastrofits.parse_binary_table(
+    @moonastrofits.parse_fits(template).unwrap().hdus[1],
+  ).unwrap()
+  assert_true(
+    @moonastrofits.encode_binary_table_data(table, [
+      [@moonastrofits.Integers([1L, 2L])],
+    ])
+    is Err(@moonastrofits.InvalidHeapDescriptor(1, 0, _)),
+  )
+  let small_cards = [
+    "XTENSION= 'BINTABLE'", "BITPIX  =                    8", "NAXIS   =                    2",
+    "NAXIS1  =                    8", "NAXIS2  =                    1", "PCOUNT  =                    3",
+    "GCOUNT  =                    1", "TFIELDS =                    1", "TFORM1  = '1PJ(1)'",
+    "END",
+  ]
+  let small_template = binary_table_file(small_cards, Bytes::make(11, b'\x00'))
+  let small_table = @moonastrofits.parse_binary_table(
+    @moonastrofits.parse_fits(small_template).unwrap().hdus[1],
+  ).unwrap()
+  assert_true(
+    @moonastrofits.encode_binary_table_data(small_table, [
+      [@moonastrofits.Integers([1L])],
+    ])
+    is Err(@moonastrofits.InvalidHeapDescriptor(1, 0, _)),
+  )
+}
+
+///|
+test "zero-repeat heap writer requires an empty cell" {
+  let cards = [
+    "XTENSION= 'BINTABLE'", "BITPIX  =                    8", "NAXIS   =                    2",
+    "NAXIS1  =                    1", "NAXIS2  =                    1", "PCOUNT  =                    0",
+    "GCOUNT  =                    1", "TFIELDS =                    2", "TFORM1  = '0PK(0)'",
+    "TFORM2  = '1B'", "END",
+  ]
+  let template = binary_table_file(cards, b"\x00")
+  let table = @moonastrofits.parse_binary_table(
+    @moonastrofits.parse_fits(template).unwrap().hdus[1],
+  ).unwrap()
+  assert_eq(
+    @moonastrofits.encode_binary_table_data(table, [
+      [@moonastrofits.Integers([]), @moonastrofits.Integers([42L])],
+    ]).unwrap(),
+    b"\x2A",
+  )
+  assert_true(
+    @moonastrofits.encode_binary_table_data(table, [
+      [@moonastrofits.Integers([1L]), @moonastrofits.Integers([42L])],
+    ])
+    is Err(@moonastrofits.InvalidHeapDescriptor(1, 0, _)),
+  )
+}
+
+///|
+test "encode heap-backed bits, reals and ASCII with shared cell rules" {
+  let cards = [
+    "XTENSION= 'BINTABLE'", "BITPIX  =                    8", "NAXIS   =                    2",
+    "NAXIS1  =                   32", "NAXIS2  =                    1", "PCOUNT  =                   13",
+    "GCOUNT  =                    1", "TFIELDS =                    3", "TFORM1  = '1PX(9)'",
+    "TFORM2  = '1QE(2)'", "TFORM3  = '1PA(3)'", "END",
+  ]
+  let template = binary_table_file(cards, Bytes::make(45, b'\x00'))
+  let table = @moonastrofits.parse_binary_table(
+    @moonastrofits.parse_fits(template).unwrap().hdus[1],
+  ).unwrap()
+  let row = [
+    @moonastrofits.Bits([
+      true, false, true, false, true, false, true, false, true,
+    ]),
+    @moonastrofits.Reals([1.5, -2.25]),
+    @moonastrofits.Text("ABC"),
+  ]
+  let encoded = @moonastrofits.encode_binary_table_data(table, [row]).unwrap()
+  assert_eq(encoded.length(), 45)
+  assert_eq(encoded[32], b'\xAA')
+  assert_eq(encoded[33], b'\x80')
+  let file = binary_table_file(cards, encoded)
+  let decoded_table = @moonastrofits.parse_binary_table(
+    @moonastrofits.parse_fits(file).unwrap().hdus[1],
+  ).unwrap()
+  assert_eq(
+    @moonastrofits.decode_binary_row(file, decoded_table, 0).unwrap(),
+    row,
+  )
+  assert_true(
+    @moonastrofits.encode_binary_table_data(table, [
+      [@moonastrofits.Integers([1L]), row[1], row[2]],
+    ])
+    is Err(@moonastrofits.InvalidTableCell(1, _)),
+  )
+}

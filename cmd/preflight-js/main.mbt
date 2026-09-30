@@ -105,6 +105,8 @@ fn check_reference_fixture(data : Bytes, file : @fits.FitsFile) -> Unit {
   if fixed.row_count != 15 || variable.row_count != 15 {
     abort("reference binary table row count changed")
   }
+  let fixed_rows : Array[Array[@fits.TableValue]] = []
+  let variable_rows : Array[Array[@fits.TableValue]] = []
   let prefix : Array[Int64] = []
   for index = 0; index < 15; index = index + 1 {
     let sequence = (index + 1).to_int64()
@@ -113,15 +115,34 @@ fn check_reference_fixture(data : Bytes, file : @fits.FitsFile) -> Unit {
       [@fits.Integers([sequence]), @fits.Integers([expected[index]])] {
       abort("fixed table row \{index} differs from Astropy reference")
     }
+    fixed_rows.push(fixed_row)
     prefix.push(expected[index])
     let heap_row = @fits.decode_binary_row(data, variable, index).unwrap()
     if heap_row != [@fits.Integers([sequence]), @fits.Integers(prefix.copy())] {
       abort("variable table row \{index} differs from Astropy reference")
     }
+    variable_rows.push(heap_row)
   }
   println(
     "Astropy reference: PASS (15 image pixels, 15 fixed rows, 15 heap rows)",
   )
+  let fixed_encoded = @fits.encode_binary_table_data(fixed, fixed_rows).unwrap()
+  let variable_encoded = @fits.encode_binary_table_data(variable, variable_rows).unwrap()
+  for
+    (hdu, encoded) in [
+      (file.hdus[1], fixed_encoded),
+      (file.hdus[2], variable_encoded),
+    ] {
+    if encoded.length() != hdu.data_length {
+      abort("encoded HDU \{hdu.index} has the wrong length")
+    }
+    for index = 0; index < encoded.length(); index = index + 1 {
+      if encoded[index] != data[hdu.data_offset + index] {
+        abort("encoded HDU \{hdu.index} differs at data byte \{index}")
+      }
+    }
+  }
+  println("byte-exact table re-encode: PASS (fixed and Q/heap data units)")
 }
 
 ///|

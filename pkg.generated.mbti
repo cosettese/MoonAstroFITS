@@ -16,6 +16,8 @@ pub fn encode_binary_row(BinaryTable, Array[TableValue]) -> Result[Bytes, FitsEr
 
 pub fn encode_binary_rows(BinaryTable, Array[Array[TableValue]]) -> Result[Bytes, FitsError]
 
+pub fn encode_binary_table_data(BinaryTable, Array[Array[TableValue]]) -> Result[Bytes, FitsError]
+
 pub fn encode_extension_hdu(Header, Bytes) -> Result[Bytes, FitsError]
 
 pub fn encode_floating_pixels(FloatingImage, Int) -> Result[Bytes, FitsError]

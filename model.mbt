@@ -106,7 +106,7 @@ pub(all) enum TableColumnKind {
 } derive(Eq, Debug)
 
 ///|
-/// A validated fixed-width FITS binary-table column.
+/// A validated FITS binary-table column, fixed-width or heap-backed.
 pub(all) struct TableColumn {
   index : Int
   name : String?
@@ -119,7 +119,7 @@ pub(all) struct TableColumn {
 } derive(Eq, Debug)
 
 ///|
-/// Row geometry and column schema for a fixed-width BINTABLE extension.
+/// Row and heap geometry plus column schema for a BINTABLE extension.
 pub(all) struct BinaryTable {
   columns : Array[TableColumn]
   row_length : Int
@@ -130,7 +130,7 @@ pub(all) struct BinaryTable {
 } derive(Eq, Debug)
 
 ///|
-/// One decoded fixed-width binary-table cell.
+/// One decoded binary-table cell.
 pub(all) enum TableValue {
   Text(String)
   Logicals(Array[Bool?])

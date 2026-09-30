@@ -109,10 +109,18 @@ array uses the same typed cell representation as a fixed column. Complex
 element formats remain unsupported.
 
 `encode_binary_row` is the byte-level inverse for the fixed-width schema and
-explicitly rejects heap-backed columns until descriptor and heap writing are
-implemented.
+explicitly rejects heap-backed columns because a single row cannot own the
+shared heap layout.
 It requires one correctly typed cell per column, enforces repeat counts and
 integer ranges, rejects finite binary32 overflow, and space-pads printable
 ASCII without truncation. `encode_binary_rows` additionally requires exactly
 `NAXIS2` rows and emits the contiguous payload accepted by extension-HDU
 assembly. Both paths revalidate the public column layout before writing bytes.
+
+`encode_binary_table_data` takes all rows together, packs `P`/`Q` array payloads
+in row-major heap order, writes big-endian count/offset descriptors, preserves
+the declared `THEAP` gap, and zero-fills unused heap bytes. It rejects arrays
+that exceed either `TFORMn` maxima or the `PCOUNT`-derived capacity. The
+official 64-bit fixture's fixed and `Q` table data units reproduce byte for
+byte after decode and re-encode. Header cards and 2880-byte HDU padding remain
+the responsibility of the extension-HDU assembly API.

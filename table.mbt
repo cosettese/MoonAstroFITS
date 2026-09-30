@@ -37,6 +37,12 @@ fn validate_table_columns(table : BinaryTable) -> Result[Unit, FitsError] {
   if table.row_length < 0 {
     return Err(InvalidParameter("NAXIS1", table.row_length))
   }
+  if table.row_count < 0 {
+    return Err(InvalidParameter("NAXIS2", table.row_count))
+  }
+  if table.data_offset < 0 {
+    return Err(InvalidTableCell(0, "negative table data offset"))
+  }
   let mut offset = 0
   for column in table.columns {
     if column.repeat < 0 {
@@ -48,6 +54,16 @@ fn validate_table_columns(table : BinaryTable) -> Result[Unit, FitsError] {
           return Err(
             InvalidTableCell(column.index, "descriptor repeat must be 0 or 1"),
           )
+        }
+        match column.max_elements {
+          Some(maximum) if maximum < 0 =>
+            return Err(
+              InvalidTableCell(
+                column.index,
+                "heap maximum must be non-negative",
+              ),
+            )
+          _ => ()
         }
         match element {
           Variable32(_) | Variable64(_) =>
@@ -677,6 +693,43 @@ fn encode_real_cell(
 }
 
 ///|
+fn encode_fixed_cell(
+  output : Array[Byte],
+  column : TableColumn,
+  cell : TableValue,
+) -> Result[Unit, FitsError] {
+  match column.kind {
+    Ascii =>
+      match cell {
+        Text(text) => encode_ascii_cell(output, column, text)
+        _ => Err(invalid_cell_type(column))
+      }
+    Logical =>
+      match cell {
+        Logicals(values) => encode_logical_cell(output, column, values)
+        _ => Err(invalid_cell_type(column))
+      }
+    Bit =>
+      match cell {
+        Bits(values) => encode_bit_cell(output, column, values)
+        _ => Err(invalid_cell_type(column))
+      }
+    UnsignedByte | Int16 | Int32 | Int64 =>
+      match cell {
+        Integers(values) => encode_integer_cell(output, column, values)
+        _ => Err(invalid_cell_type(column))
+      }
+    Float32 | Float64 =>
+      match cell {
+        Reals(values) => encode_real_cell(output, column, values)
+        _ => Err(invalid_cell_type(column))
+      }
+    Variable32(_) | Variable64(_) =>
+      Err(UnsupportedTableFormat("TFORM\{column.index}", column.format))
+  }
+}
+
+///|
 /// Encode one fixed-width binary-table row in FITS network byte order.
 ///
 /// Text is padded with spaces to its declared width. Numeric cells must supply
@@ -694,35 +747,7 @@ pub fn encode_binary_row(
   }
   let output = Array(capacity=table.row_length)
   for index, column in table.columns {
-    let result = match column.kind {
-      Ascii =>
-        match cells[index] {
-          Text(text) => encode_ascii_cell(output, column, text)
-          _ => Err(invalid_cell_type(column))
-        }
-      Logical =>
-        match cells[index] {
-          Logicals(values) => encode_logical_cell(output, column, values)
-          _ => Err(invalid_cell_type(column))
-        }
-      Bit =>
-        match cells[index] {
-          Bits(values) => encode_bit_cell(output, column, values)
-          _ => Err(invalid_cell_type(column))
-        }
-      UnsignedByte | Int16 | Int32 | Int64 =>
-        match cells[index] {
-          Integers(values) => encode_integer_cell(output, column, values)
-          _ => Err(invalid_cell_type(column))
-        }
-      Float32 | Float64 =>
-        match cells[index] {
-          Reals(values) => encode_real_cell(output, column, values)
-          _ => Err(invalid_cell_type(column))
-        }
-      Variable32(_) | Variable64(_) =>
-        Err(UnsupportedTableFormat("TFORM\{column.index}", column.format))
-    }
+    let result = encode_fixed_cell(output, column, cells[index])
     match result {
       Err(error) => return Err(error)
       Ok(_) => ()

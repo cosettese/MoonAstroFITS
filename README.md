@@ -45,6 +45,8 @@ so the same parser can run on MoonBit's portable targets.
 - MSB-first packed bit-array column round trips with zeroed padding bits.
 - checked `P`/`Q` variable-length binary-table array decoding from the heap,
   including optional `THEAP` gaps and declared maximum lengths.
+- `P`/`Q` heap encoding with deterministic row-major packing, capacity checks,
+  and byte-exact reproduction of the official 64-bit sample's table data units.
 
 Run the checks and the in-memory example:
 
@@ -67,12 +69,12 @@ For a complete comparison against the 15 Astropy reference rows, run:
 moon run cmd/preflight-js --target js -- --check-sample conformance/fixtures/test64bit1.fit
 ```
 
-The Astropy and FITSverify comparison, expected values, fixture provenance, and
-remaining heap-encoding boundary are recorded in
+The Astropy and FITSverify comparison, expected values, and fixture provenance
+are recorded in
 [conformance/README.md](conformance/README.md).
 
-The next milestones will add variable-length heap encoding and higher-level
-table construction helpers.
+The next milestones will add higher-level table construction helpers and more
+independent real-file fixtures.
 
 ## Scope and origin
 

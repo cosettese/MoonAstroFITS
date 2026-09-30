@@ -37,9 +37,10 @@ HDU 2: kind=BINTABLE data_bytes=1260
   first row cells: 2
 primary integer decode: PASS (15 samples, BSCALE=1, BZERO=0)
 Astropy reference: PASS (15 image pixels, 15 fixed rows, 15 heap rows)
+byte-exact table re-encode: PASS (fixed and Q/heap data units)
 ```
 
-`P/Q` 数组解码依据 FITS 4.0 的 descriptor 和 heap 边界规则实现，覆盖 `A/L/X/B/I/J/K/E/D` 元素类型；`THEAP` 间隔、零长度数组、最大元素数和越界 descriptor 有独立测试。写入 heap 的编码 API 尚未实现。规范依据：[FITS Standard 4.0, §7.3.5](https://fits.gsfc.nasa.gov/standard40/fits_standard40aa-le.pdf)。
+`P/Q` 数组读写依据 FITS 4.0 的 descriptor 和 heap 边界规则实现，覆盖 `A/L/X/B/I/J/K/E/D` 元素类型；`THEAP` 间隔、零长度数组、最大元素数和越界 descriptor 有独立测试。编码后的定宽表与 Q/heap 表数据单元均与官方样例逐字节一致。规范依据：[FITS Standard 4.0, §7.3.5](https://fits.gsfc.nasa.gov/standard40/fits_standard40aa-le.pdf)。
 
 ## 2. Astropy 对照
 
@@ -88,4 +89,4 @@ Verification found 0 warning(s) and 0 error(s).
 | 第 2 个 HDU 的 `1J + 1K` 定宽表 | 通过 | 0 warning / 0 error | 通过并可解码首行 2 个单元 |
 | 第 3 个 HDU 的 `1QK(15)` 变长表 | 通过 | 0 warning / 0 error | 15 行逐行与 Astropy 参考值一致 |
 
-`--check-sample` 固化了 Astropy 读到的原始 64 位图像值、15 行定宽表值和 15 行 heap 数组，CI 在 Linux、macOS、Windows 上运行该命令。它验证当前夹具的读取语义；完整 FITS 标准覆盖仍需要更多类型与更多真实文件。
+`--check-sample` 固化了 Astropy 读到的原始 64 位图像值、15 行定宽表值和 15 行 heap 数组，再将两张表重新编码并与原始数据单元逐字节比较；CI 在 Linux、macOS、Windows 上运行该命令。完整 FITS 标准覆盖仍需要更多类型与更多真实文件。
