@@ -52,13 +52,8 @@ moon test --deny-warn
 moon run cmd/main
 ```
 
-Run the real-file preflight against the NASA/GSFC 64-bit FITS sample:
-
-```bash
-moon run cmd/preflight --target native -- conformance/fixtures/test64bit1.fit
-```
-
-On a Windows host without a C compiler, the equivalent Node.js/JS example is:
+Run the real-file preflight against the NASA/GSFC 64-bit FITS sample with the
+portable Node.js/JS host example:
 
 ```bash
 moon run cmd/preflight-js --target js -- conformance/fixtures/test64bit1.fit

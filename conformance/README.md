@@ -4,13 +4,7 @@
 
 ## 1. MoonAstroFITS 真实文件示例
 
-推荐在有 native C 编译器的环境执行标准入口：
-
-```text
-moon run cmd/preflight --target native -- conformance/fixtures/test64bit1.fit
-```
-
-Windows 没有 C 编译器时，可用 Node.js/JS 入口完成相同的核心解析调用：
+使用 Node.js/JS 入口即可在 Windows、Linux 或 macOS 上完成相同的核心解析调用：
 
 ```text
 moon run cmd/preflight-js --target js -- conformance/fixtures/test64bit1.fit

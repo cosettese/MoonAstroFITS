@@ -24,7 +24,3 @@ keywords = [ "fits", "astronomy", "scientific-data", "binary-format" ]
 preferred_target = "wasm-gc"
 
 description = "A pure MoonBit FITS astronomy data parser, validator, and toolkit."
-
-import {
-  "moonbitlang/async@0.22.4",
-}
