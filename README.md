@@ -43,6 +43,8 @@ so the same parser can run on MoonBit's portable targets.
 - complete row-set encoding for direct extension-HDU assembly.
 - tri-state logical column round trips using `T`, `F`, and null bytes.
 - MSB-first packed bit-array column round trips with zeroed padding bits.
+- checked `P`/`Q` variable-length binary-table array decoding from the heap,
+  including optional `THEAP` gaps and declared maximum lengths.
 
 Run the checks and the in-memory example:
 
@@ -59,12 +61,18 @@ portable Node.js/JS host example:
 moon run cmd/preflight-js --target js -- conformance/fixtures/test64bit1.fit
 ```
 
+For a complete comparison against the 15 Astropy reference rows, run:
+
+```bash
+moon run cmd/preflight-js --target js -- --check-sample conformance/fixtures/test64bit1.fit
+```
+
 The Astropy and FITSverify comparison, expected values, fixture provenance, and
-the intentional `Q`/heap boundary are recorded in
+remaining heap-encoding boundary are recorded in
 [conformance/README.md](conformance/README.md).
 
-The next milestones will add variable-length array descriptors, heap decoding,
-and higher-level table construction helpers.
+The next milestones will add variable-length heap encoding and higher-level
+table construction helpers.
 
 ## Scope and origin
 

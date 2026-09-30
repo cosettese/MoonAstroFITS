@@ -101,6 +101,8 @@ pub(all) enum TableColumnKind {
   Int64
   Float32
   Float64
+  Variable32(TableColumnKind)
+  Variable64(TableColumnKind)
 } derive(Eq, Debug)
 
 ///|
@@ -113,6 +115,7 @@ pub(all) struct TableColumn {
   offset : Int
   width : Int
   kind : TableColumnKind
+  max_elements : Int?
 } derive(Eq, Debug)
 
 ///|
@@ -122,6 +125,8 @@ pub(all) struct BinaryTable {
   row_length : Int
   row_count : Int
   data_offset : Int
+  heap_offset : Int
+  heap_length : Int
 } derive(Eq, Debug)
 
 ///|
@@ -170,6 +175,7 @@ pub(all) enum FitsError {
   InvalidTableRowCount(Int, Int)
   InvalidTableCellCount(Int, Int)
   InvalidTableCell(Int, String)
+  InvalidHeapDescriptor(Int, Int, String)
 } derive(Eq, Debug)
 
 ///|
@@ -236,6 +242,8 @@ pub fn FitsError::message(self : FitsError) -> String {
       "FITS binary-table row requires \{expected} cells, got \{actual}"
     InvalidTableCell(column, reason) =>
       "invalid FITS binary-table column \{column}: \{reason}"
+    InvalidHeapDescriptor(column, row, reason) =>
+      "invalid FITS heap descriptor in column \{column}, row \{row}: \{reason}"
   }
 }
 

@@ -86,7 +86,7 @@ analyzes the header in extension mode. This requires an `XTENSION` card plus
 ordered `PCOUNT` and `GCOUNT`, supports both IMAGE and generic extensions, and
 uses the general grouped-data formula when validating the supplied payload.
 
-## Fixed-width binary tables
+## Binary tables
 
 `parse_binary_table` turns the `TFIELDS`, `TTYPEn`, and `TFORMn` metadata of a
 `BINTABLE` extension into checked row geometry. The first supported storage
@@ -100,11 +100,17 @@ HDU data unit before any cell is read.
 
 `decode_binary_row` returns one typed value per column, preserves repeated
 numeric fields as arrays, trims only FITS ASCII padding, and interprets numeric
-bytes in network order. Variable-length `P`/`Q` descriptors, heap data, and
-complex values remain explicit unsupported formats until their
-representation can be modeled without lossy shortcuts.
+bytes in network order. For `P` and `Q` descriptors, the table parser records
+the heap start and length from `NAXIS1`, `NAXIS2`, `PCOUNT`, and optional
+`THEAP`. The decoder checks the signed count and offset, optional `TFORMn`
+maximum, element byte width, and entire heap range before reading. A zero
+element count does not dereference its undefined offset. The referenced
+array uses the same typed cell representation as a fixed column. Complex
+element formats remain unsupported.
 
-`encode_binary_row` is the byte-level inverse for the same fixed-width schema.
+`encode_binary_row` is the byte-level inverse for the fixed-width schema and
+explicitly rejects heap-backed columns until descriptor and heap writing are
+implemented.
 It requires one correctly typed cell per column, enforces repeat counts and
 integer ranges, rejects finite binary32 overflow, and space-pads printable
 ASCII without truncation. `encode_binary_rows` additionally requires exactly

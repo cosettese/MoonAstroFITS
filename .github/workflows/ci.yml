@@ -27,6 +27,8 @@ jobs:
           git diff --exit-code
       - run: moon check --deny-warn
       - run: moon test --deny-warn
+      - name: Check real FITS file against Astropy reference
+        run: moon run cmd/preflight-js --target js -- --check-sample conformance/fixtures/test64bit1.fit
       - name: Verify generated interfaces
         run: |
           moon info
@@ -45,3 +47,5 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: moon check --target all --deny-warn
       - run: moon test --target all --deny-warn
+      - name: Check real FITS file on each host
+        run: moon run cmd/preflight-js --target js -- --check-sample conformance/fixtures/test64bit1.fit

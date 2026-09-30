@@ -10,6 +10,12 @@
 moon run cmd/preflight-js --target js -- conformance/fixtures/test64bit1.fit
 ```
 
+逐行核对 Astropy 参考值并在不一致时以非零状态退出：
+
+```text
+moon run cmd/preflight-js --target js -- --check-sample conformance/fixtures/test64bit1.fit
+```
+
 本次 JS 入口实测结果：
 
 ```text
@@ -19,15 +25,21 @@ HDU 0: kind=PRIMARY data_bytes=120
   image: BITPIX=64 axes=[5, 3] pixels=15
 HDU 1: kind=BINTABLE data_bytes=180
   table: rows=15 row_bytes=12 columns=2
+  heap: offset=8820 bytes=0
     column 1: TFORM=1J width=4
     column 2: TFORM=1K width=8
     first row cells: 2
 HDU 2: kind=BINTABLE data_bytes=1260
-  table: unsupported or invalid fixed-width schema (... TFORM2 ... 1QK(15))
+  table: rows=15 row_bytes=20 columns=2
+  heap: offset=14700 bytes=960
+    column 1: TFORM=1J width=4
+    column 2: TFORM=1QK(15) width=16
+  first row cells: 2
 primary integer decode: PASS (15 samples, BSCALE=1, BZERO=0)
+Astropy reference: PASS (15 image pixels, 15 fixed rows, 15 heap rows)
 ```
 
-这里的“unsupported”是有意的能力边界：`parse_fits` 已经完整遍历并校验第三个 HDU 的结构；固定宽度表 API 只接受当前实现的 `A/L/X/B/I/J/K/E/D` 字段，因此对 `Q` 可变长度描述符给出明确错误，不会把 heap 数据误当成定宽单元。
+`P/Q` 数组解码依据 FITS 4.0 的 descriptor 和 heap 边界规则实现，覆盖 `A/L/X/B/I/J/K/E/D` 元素类型；`THEAP` 间隔、零长度数组、最大元素数和越界 descriptor 有独立测试。写入 heap 的编码 API 尚未实现。规范依据：[FITS Standard 4.0, §7.3.5](https://fits.gsfc.nasa.gov/standard40/fits_standard40aa-le.pdf)。
 
 ## 2. Astropy 对照
 
@@ -74,6 +86,6 @@ Verification found 0 warning(s) and 0 error(s).
 | 文件长度 17,280 bytes | 通过 | 通过 | 通过 |
 | 3 个 HDU，主图像 BITPIX=64、轴 5×3 | 通过 | 通过 | 通过并可解码 15 个样本 |
 | 第 2 个 HDU 的 `1J + 1K` 定宽表 | 通过 | 0 warning / 0 error | 通过并可解码首行 2 个单元 |
-| 第 3 个 HDU 的 `1QK(15)` 变长表 | 通过 | 0 warning / 0 error | 结构遍历通过；定宽表 API 明确报告不支持 |
+| 第 3 个 HDU 的 `1QK(15)` 变长表 | 通过 | 0 warning / 0 error | 15 行逐行与 Astropy 参考值一致 |
 
-因此本样例同时证明了“真实文件可读、结构边界与外部工具一致”和“暂未实现的 Q/heap 能力有可诊断的失败路径”。它不宣称 MoonAstroFITS 已经实现 `Q` 变长数组解码；后续若补上 heap API，应在同一夹具上增加逐行语义对比。
+`--check-sample` 固化了 Astropy 读到的原始 64 位图像值、15 行定宽表值和 15 行 heap 数组，CI 在 Linux、macOS、Windows 上运行该命令。它验证当前夹具的读取语义；完整 FITS 标准覆盖仍需要更多类型与更多真实文件。

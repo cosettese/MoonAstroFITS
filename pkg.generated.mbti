@@ -42,6 +42,8 @@ pub(all) struct BinaryTable {
   row_length : Int
   row_count : Int
   data_offset : Int
+  heap_offset : Int
+  heap_length : Int
 } derive(Eq, @debug.Debug)
 pub fn BinaryTable::equal(Self, Self) -> Bool
 pub fn BinaryTable::not_equal(Self, Self) -> Bool
@@ -91,6 +93,7 @@ pub(all) enum FitsError {
   InvalidTableRowCount(Int, Int)
   InvalidTableCellCount(Int, Int)
   InvalidTableCell(Int, String)
+  InvalidHeapDescriptor(Int, Int, String)
 } derive(Eq, @debug.Debug)
 pub fn FitsError::equal(Self, Self) -> Bool
 pub fn FitsError::message(Self) -> String
@@ -178,6 +181,7 @@ pub(all) struct TableColumn {
   offset : Int
   width : Int
   kind : TableColumnKind
+  max_elements : Int?
 } derive(Eq, @debug.Debug)
 pub fn TableColumn::equal(Self, Self) -> Bool
 pub fn TableColumn::not_equal(Self, Self) -> Bool
@@ -193,6 +197,8 @@ pub(all) enum TableColumnKind {
   Int64
   Float32
   Float64
+  Variable32(TableColumnKind)
+  Variable64(TableColumnKind)
 } derive(Eq, @debug.Debug)
 pub fn TableColumnKind::equal(Self, Self) -> Bool
 pub fn TableColumnKind::not_equal(Self, Self) -> Bool

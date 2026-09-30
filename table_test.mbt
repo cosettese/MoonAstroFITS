@@ -31,6 +31,7 @@ test "parse a binary-table schema and decode mixed rows" {
     offset: 0,
     width: 4,
     kind: @moonastrofits.Ascii,
+    max_elements: None,
   })
   assert_eq(table.columns[1].offset, 4)
   assert_eq(table.columns[2].offset, 8)
@@ -271,11 +272,14 @@ test "reject caller-constructed table layouts before encoding" {
         offset: 1,
         width: 1,
         kind: @moonastrofits.UnsignedByte,
+        max_elements: None,
       },
     ],
     row_length: 1,
     row_count: 1,
     data_offset: 0,
+    heap_offset: 1,
+    heap_length: 0,
   }
   assert_true(
     @moonastrofits.encode_binary_row(table, [@moonastrofits.Integers([1L])])
